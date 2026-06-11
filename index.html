@@ -138,45 +138,6 @@
       color: var(--text);
     }
 
-    .cycle-rule select,
-    .strategy-note select {
-      display: inline-block;
-      width: auto;
-      height: auto;
-      color: var(--text);
-      font-size: inherit;
-      line-height: inherit;
-      vertical-align: baseline;
-      cursor: pointer;
-    }
-
-    .inline-check {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text);
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .inline-check input {
-      appearance: none;
-      width: 12px;
-      height: 12px;
-      border: 1px solid var(--line-strong);
-      background: transparent;
-      display: inline-block;
-      padding: 0;
-      margin: 0;
-      vertical-align: -1px;
-      cursor: pointer;
-    }
-
-    .inline-check input:checked {
-      background: var(--reserve);
-      border-color: var(--reserve);
-    }
-
     .controls {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
@@ -477,22 +438,13 @@
       <div class="intro-copy">
         <h1>Bitcoin DCA Cycle Simulator</h1>
         <div class="sub">Pick a start date and savings plan, then compare daily DCA with cycle-aware buying and trimming.</div>
-        <p class="cycle-rule">Cycle strategies wait with cash, then buy when BTC falls to
-          <select id="cycleTrigger" aria-label="Cycle buy trigger">
-            <option value="60">p60</option>
-            <option value="55">p55</option>
-            <option value="50" selected>p50</option>
-            <option value="45">p45</option>
-            <option value="40">p40</option>
-          </select>
-          or lower, or
-          <label class="inline-check"><input id="useSmaTrigger" type="checkbox" checked> to its 200-week SMA</label>.
+        <p class="cycle-rule">Cycle strategies wait with cash, then buy when coins in loss reaches a top 1% raw historical extreme.
           They stop new buys when BTC reaches a fresh all-time high (ATH).
         </p>
         <details class="strategy-note" open>
           <summary>How it works</summary>
           <p>p-levels are supply cost-basis percentiles: the buy price of the BTC supply at that percentile. p50 means BTC is near the median coin cost basis; lower p-levels usually mean deeper market pain, higher p-levels usually mean heat.</p>
-          <p>All cycle strategies use the same buy rule: once the buy phase is active, buy the larger of the p-level grid amount or 0.5% of portfolio value per day. Cycle Buy + Trim sells BTC worth 0.5% of portfolio value per day near p95-p100, but never below the prior 1-year ATH captured when trim mode starts.</p>
+          <p>All cycle strategies use the same buy rule: once the buy phase is active, buy the larger of the p-level grid amount or 0.65% of portfolio value per day. Cycle Buy + Trim sells BTC worth 0.65% of portfolio value per day near p95-p100, but never below the prior 1-year ATH captured when trim mode starts.</p>
           <p>Daily DCA uses one fixed daily order size based on a 31-day month. It only switches to 2x when enough cash remains to keep buying every day for about a month.</p>
         </details>
       </div>
@@ -774,7 +726,7 @@
     </section>
 
     <footer class="assumptions">
-      No fees. No taxes. Daily close data. Supply cost-basis percentiles. 200-week SMA and 1-year ATH from Bitview.
+      No fees. No taxes. Daily close data. Supply cost-basis percentiles, coins in loss, and 1-year ATH from Bitview.
     </footer>
   </main>
 
@@ -782,35 +734,35 @@
     "use strict";
 
     const API_BASE = "https://bitview.space";
-    const CACHE_VERSION = "v5";
+    const CACHE_VERSION = "v6";
     const DATA_START = "2016-01-01";
     const DAYS_PER_MONTH = 31;
     const DAILY_DCA_RUNWAY_DAYS = DAYS_PER_MONTH;
     const DAILY_DCA_MAX_MULTIPLE = 2;
+    const MIN_EVENT_HISTORY_DAYS = 365 * 4;
+    const SUPPLY_IN_LOSS_TRIGGER_MAX_PERCENT = 1;
     const PCTS = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40];
     const PCTS_ASC = [...PCTS].reverse();
     const SIMPLE_GRID = new Map([
       [100, 1], [95, 1.5], [90, 2], [85, 2.5], [80, 3], [75, 3.5], [70, 4],
       [65, 4.5], [60, 5], [55, 5.5], [50, 6], [45, 6.5], [40, 7],
     ]);
-    const CYCLE_BUY_FLOOR_FRACTION = 0.005;
-    const TRIM_SELL_FRACTION = 0.005;
+    const CYCLE_BUY_FLOOR_FRACTION = 0.0065;
+    const TRIM_SELL_FRACTION = 0.0065;
     const CHART_WIDTH_MIN = 320;
     const CHART_WIDTH_FALLBACK = 900;
     const CHART_HEIGHT_MIN = 220;
     const CHART_HEIGHT_FALLBACK = 520;
     const CHART_PAD = { top: 20, right: 70, bottom: 34, left: 76 };
     const HISTORY_PAD = { top: 14, right: 70, bottom: 30, left: 70 };
-    const SMA_200W_SERIES = "price_sma_200w";
     const ATH_1Y_SERIES = "price_max_1y";
-    const SERIES = ["date", "price", "price_ath", SMA_200W_SERIES, ATH_1Y_SERIES, ...PCTS.map(costBasisSeriesName)];
+    const SUPPLY_IN_LOSS_SERIES = "supply_in_loss";
+    const SERIES = ["date", "price", "price_ath", ATH_1Y_SERIES, ...PCTS.map(costBasisSeriesName)];
 
     const els = {
       initialReserve: document.querySelector("#initialReserve"),
       initialInvested: document.querySelector("#initialInvested"),
       monthlyTopup: document.querySelector("#monthlyTopup"),
-      cycleTrigger: document.querySelector("#cycleTrigger"),
-      useSmaTrigger: document.querySelector("#useSmaTrigger"),
       chartMeta: document.querySelector("#chartMeta"),
       historyMeta: document.querySelector("#historyMeta"),
       historySvg: document.querySelector("#historySvg"),
@@ -860,8 +812,6 @@
       for (const button of els.activityFilters) {
         button.addEventListener("click", () => setActivityFilter(button.dataset.activityFilter));
       }
-      els.cycleTrigger.addEventListener("change", scheduleRun);
-      els.useSmaTrigger.addEventListener("change", scheduleRun);
       window.addEventListener("resize", () => {
         if (latestRun) {
           renderSingle(latestRun);
@@ -906,8 +856,6 @@
         initialReserve: numberFrom(els.initialReserve, 5000),
         initialInvested: numberFrom(els.initialInvested, 5000),
         monthlyTopup: numberFrom(els.monthlyTopup, 1000),
-        triggerPct: numberFrom(els.cycleTrigger, 50),
-        useSmaTrigger: els.useSmaTrigger.checked,
       };
     }
 
@@ -925,8 +873,6 @@
       setNumberInput(els.initialReserve, params.get("reserve"));
       setNumberInput(els.initialInvested, params.get("invested"));
       setNumberInput(els.monthlyTopup, params.get("monthly"));
-      setSelectValue(els.cycleTrigger, params.get("trigger"));
-      setCheckboxValue(els.useSmaTrigger, params.get("sma"));
     }
 
     function writeUrlState(opts) {
@@ -936,8 +882,8 @@
         url.searchParams.set("reserve", String(opts.initialReserve));
         url.searchParams.set("invested", String(opts.initialInvested));
         url.searchParams.set("monthly", String(opts.monthlyTopup));
-        url.searchParams.set("trigger", String(opts.triggerPct));
-        url.searchParams.set("sma", opts.useSmaTrigger ? "1" : "0");
+        url.searchParams.delete("trigger");
+        url.searchParams.delete("sma");
         history.replaceState(null, "", url);
       } catch {
         // Sharing state is optional; never block the simulation.
@@ -950,22 +896,17 @@
       if (Number.isFinite(number) && number >= 0) input.value = String(number);
     }
 
-    function setSelectValue(select, value) {
-      if (value === null) return;
-      if ([...select.options].some((option) => option.value === value)) select.value = value;
-    }
-
-    function setCheckboxValue(input, value) {
-      if (value === null) return;
-      input.checked = value !== "0" && value !== "false";
-    }
-
     async function loadRows(end) {
       const cacheKey = `btc-cycle-sim:${CACHE_VERSION}:${DATA_START}:${end}`;
       const cached = getCache(cacheKey);
       if (isFreshRows(cached, end)) return cached;
 
-      const loaded = new Map(await Promise.all(SERIES.map(async (name) => [name, await fetchSeries(name, end)])));
+      const [entries, supplyInLossSeries] = await Promise.all([
+        Promise.all(SERIES.map(async (name) => [name, await fetchSeries(name, end)])),
+        fetchSeries(SUPPLY_IN_LOSS_SERIES, end, null),
+      ]);
+      const loaded = new Map(entries);
+      const supplyInLossTriggers = supplyInLossTriggerSet(supplyInLossSeries);
       const dateSeries = loaded.get("date");
       const priceSeries = loaded.get("price");
       const startIndex = Math.max(dateSeries.start, priceSeries.start);
@@ -978,8 +919,8 @@
           date: seriesValue(dateSeries, seriesIndex),
           price: seriesValue(priceSeries, seriesIndex),
           ath: seriesValue(loaded.get("price_ath"), seriesIndex),
-          sma200w: seriesValue(loaded.get(SMA_200W_SERIES), seriesIndex),
           ath1y: seriesValue(loaded.get(ATH_1Y_SERIES), seriesIndex),
+          atSupplyInLossTrigger: supplyInLossTriggers.has(seriesIndex),
           levels,
         };
       });
@@ -998,9 +939,45 @@
       return offset >= 0 && offset < series.data.length ? series.data[offset] : null;
     }
 
-    async function fetchSeries(series, end) {
+    function supplyInLossTriggerSet(series) {
+      const triggers = new Set();
+      const sorted = [];
+      for (let seriesIndex = series.start; seriesIndex < series.end; seriesIndex += 1) {
+        const value = seriesValue(series, seriesIndex);
+        if (!validLevel(value)) continue;
+        if (sorted.length >= MIN_EVENT_HISTORY_DAYS) {
+          const tailCount = sorted.length - lowerBound(sorted, value);
+          const tailPercent = ((tailCount + 1) / (sorted.length + 1)) * 100;
+          if (tailPercent < SUPPLY_IN_LOSS_TRIGGER_MAX_PERCENT) {
+            triggers.add(seriesIndex);
+          }
+        }
+        insertSorted(sorted, value);
+      }
+      return triggers;
+    }
+
+    function lowerBound(sorted, value) {
+      let low = 0;
+      let high = sorted.length;
+      while (low < high) {
+        const middle = (low + high) >> 1;
+        if (sorted[middle] < value) {
+          low = middle + 1;
+        } else {
+          high = middle;
+        }
+      }
+      return low;
+    }
+
+    function insertSorted(sorted, value) {
+      sorted.splice(lowerBound(sorted, value), 0, value);
+    }
+
+    async function fetchSeries(series, end, start = DATA_START) {
       const url = new URL(`/api/series/${series}/day1`, API_BASE);
-      url.searchParams.set("start", DATA_START);
+      if (start) url.searchParams.set("start", start);
       url.searchParams.set("end", end);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Bitview fetch failed for ${series}: ${response.status}`);
@@ -1171,7 +1148,6 @@
         exposure: value > 0 ? btcValue / value : 0,
         buyUsd,
         sellUsd,
-        sma200w: row.sma200w,
         atBuyTrigger,
         priceZone: priceZoneValue(row),
         cyclePhase,
@@ -1247,7 +1223,7 @@
 
     function renderSingle(run) {
       const { opts, result } = run;
-      els.chartMeta.textContent = `${result.start} -> ${opts.today} | trigger p${opts.triggerPct} | 200w SMA ${opts.useSmaTrigger ? "on" : "off"} | starting cash $${fmt(opts.initialReserve)} | starting BTC buy $${fmt(opts.initialInvested)} | savings $${fmt(opts.monthlyTopup)}/mo`;
+      els.chartMeta.textContent = `${result.start} -> ${opts.today} | trigger coins in loss top 1% | starting cash $${fmt(opts.initialReserve)} | starting BTC buy $${fmt(opts.initialInvested)} | savings $${fmt(opts.monthlyTopup)}/mo`;
       renderHistoryChart(els.historySvg, opts);
       renderEquityChart(els.equitySvg, result.series);
       renderRankChart(els.rankSvg, result.series);
@@ -1849,17 +1825,8 @@
       return Math.max(gridUsd, portfolioValue * CYCLE_BUY_FLOOR_FRACTION);
     }
 
-    function touchesBuyTrigger(row, opts) {
-      return touchesLevel(row, opts.triggerPct) || (opts.useSmaTrigger && touches200wSma(row));
-    }
-
-    function touchesLevel(row, pctValue) {
-      const level = row.levels.get(pctValue);
-      return validLevel(level) && row.price <= level;
-    }
-
-    function touches200wSma(row) {
-      return validLevel(row.sma200w) && row.price <= row.sma200w;
+    function touchesBuyTrigger(row) {
+      return row.atSupplyInLossTrigger === true;
     }
 
     function priceZoneValue(row) {
