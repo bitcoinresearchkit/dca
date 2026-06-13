@@ -1022,7 +1022,7 @@
           sellArmed = false;
           sellFloor = null;
         }
-        if (buyActive && isP100Increase(row, allRows[i - 1])) {
+        if (buyActive && isFreshAth(row, allRows[i - 1])) {
           buyActive = false;
           sellArmed = true;
           sellFloor = cycleSellFloor(row, allRows[i - 1]);
@@ -1114,7 +1114,7 @@
           sellArmed = false;
           sellFloor = null;
         }
-        if (buyActive && isP100Increase(row, allRows[i - 1])) {
+        if (buyActive && isFreshAth(row, allRows[i - 1])) {
           buyActive = false;
           sellArmed = true;
           sellFloor = cycleSellFloor(row, allRows[i - 1]);
@@ -1855,10 +1855,12 @@
       return "idle";
     }
 
-    function isP100Increase(row, previousRow) {
-      const level = row.levels.get(100);
-      const previous = previousRow?.levels.get(100);
-      return validLevel(level) && validLevel(previous) && level > previous;
+    function isFreshAth(row, previousRow) {
+      return (
+        validLevel(row.ath) &&
+        validLevel(previousRow?.ath) &&
+        row.ath > previousRow.ath
+      );
     }
 
     function isInsideSellBand(row) {
