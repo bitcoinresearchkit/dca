@@ -182,7 +182,8 @@
     .formula-block {
       margin-top: 12px;
       padding: 10px 12px;
-      border-left: 2px solid var(--accent);
+      border: 1px solid var(--line);
+      border-radius: 0.35rem;
       background: var(--light-black);
       color: var(--dark-white);
       font-family: var(--mono);
@@ -219,9 +220,16 @@
     }
 
     .latest-signal {
+      --today-pad: 0.875rem;
+      --today-gap: 0.75rem;
+      --today-gap-sm: 0.5rem;
+      --today-font: 0.75rem;
+      --today-line: 1.35;
       min-width: 0;
-      border-top: 1px solid var(--accent);
-      padding-top: 0.875rem;
+      padding: var(--today-pad);
+      border: 1px solid var(--accent);
+      border-radius: 0.45rem;
+      background: #050505;
     }
 
     .signal-kicker,
@@ -229,17 +237,17 @@
     .signal-price span,
     .signal-row {
       color: var(--muted);
-      font-size: 0.75rem;
-      line-height: 1.25;
+      font-size: var(--today-font);
+      line-height: var(--today-line);
       text-transform: uppercase;
     }
 
     .signal-main {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 1rem;
+      gap: var(--today-gap);
       align-items: start;
-      padding: 0.5rem 0 1rem;
+      padding: var(--today-gap-sm) 0 var(--today-pad);
       border-bottom: 1px solid var(--line);
     }
 
@@ -253,36 +261,77 @@
     .signal-phase[data-action="buy"] { color: var(--reserve); }
     .signal-phase[data-action="sell"] { color: var(--loss); }
     .signal-phase[data-action="wait"] { color: var(--simple-sell); }
+    .signal-phase[data-action="today"] { color: var(--text); }
 
     .signal-context {
-      margin-top: 0.4rem;
+      margin-top: var(--today-gap-sm);
     }
 
     .signal-price {
       display: grid;
       justify-items: end;
-      gap: 0.35rem;
+      gap: var(--today-gap-sm);
       min-width: 8ch;
       text-align: right;
     }
 
     .signal-price strong {
       color: var(--dark-white);
-      font-size: 1.25rem;
-      line-height: 1;
+      font-size: var(--today-font);
+      line-height: var(--today-line);
+    }
+
+    .today-inputs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--today-gap);
+      padding: var(--today-pad) 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .today-inputs label {
+      gap: var(--today-gap-sm);
+      min-width: 0;
+    }
+
+    .today-inputs input {
+      height: 1.75rem;
+      font-size: var(--today-font);
+      line-height: var(--today-line);
+      color: var(--dark-white);
+    }
+
+    .today-presets {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--today-gap-sm) var(--today-gap);
+      padding-bottom: var(--today-pad);
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: var(--today-font);
+      line-height: var(--today-line);
+      text-transform: uppercase;
     }
 
     .signal-rows {
       display: grid;
-      padding-top: 0.75rem;
+      gap: 0;
+      padding-top: 0;
     }
 
     .signal-row {
       display: grid;
-      grid-template-columns: 0.75rem minmax(7rem, 1fr) minmax(5.5rem, auto);
+      grid-template-columns: 0.5rem minmax(5rem, 0.8fr) minmax(5.75rem, auto) minmax(0, 1.8fr);
       align-items: baseline;
-      gap: 0.55rem;
+      gap: var(--today-gap-sm);
       min-width: 0;
+      padding: var(--today-gap) 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .signal-row:last-child {
+      border-bottom: 0;
     }
 
     .signal-mark {
@@ -292,9 +341,20 @@
       background: currentColor;
     }
 
+    .signal-name {
+      text-transform: none;
+    }
+
     .signal-action {
+      justify-self: end;
       color: var(--dark-white);
+      padding: 0.1rem 0.25rem;
+      background: var(--light-black);
+      border-radius: 0.25rem;
       text-align: right;
+      text-transform: none;
+      font-size: var(--today-font);
+      line-height: var(--today-line);
     }
 
     .signal-row[data-action="buy"] .signal-action { color: var(--reserve); }
@@ -302,10 +362,9 @@
     .signal-row[data-action="wait"] .signal-action { color: var(--simple-sell); }
 
     .signal-detail {
-      grid-column: 2 / -1;
       overflow: hidden;
       color: var(--muted);
-      line-height: 1.35;
+      line-height: var(--today-line);
       text-align: left;
       text-transform: none;
       white-space: normal;
@@ -316,17 +375,69 @@
       font-weight: 600;
     }
 
-    .strategy-defs {
+    .signal-summary {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px 18px;
-      padding: 10px 0 0;
-      color: var(--muted);
-      line-height: 1.45;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--today-gap-sm) var(--today-gap);
+      margin-top: 0;
+      padding-top: var(--today-pad);
+      border-top: 1px solid var(--line);
+      color: var(--dark-white);
+      font-size: var(--today-font);
+      line-height: var(--today-line);
     }
 
-    .strategy-defs strong {
-      color: var(--text);
+    .signal-summary strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .result-chart {
+      margin-bottom: var(--section-gap);
+      padding-bottom: var(--section-gap);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .result-chart-head {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: end;
+      gap: 0.5rem 1rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.35rem;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .result-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      min-height: 1.35rem;
+      padding: 0.15rem 0.35rem;
+      border: 1px solid oklch(32% 0 0);
+      border-radius: 0.25rem;
+    }
+
+    .result-meta em {
+      color: var(--muted);
+      font-style: normal;
+    }
+
+    .result-meta strong {
+      color: var(--dark-white);
+      font-weight: 500;
     }
 
     .controls {
@@ -336,6 +447,17 @@
       padding: 0.25rem 0 var(--section-gap);
       border-bottom: 1px solid var(--line);
       margin-bottom: var(--section-gap);
+    }
+
+    .control-heading {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .control-heading .title {
+      color: var(--text);
+      margin-bottom: 0.35rem;
     }
 
     .detail-grid {
@@ -348,9 +470,9 @@
     .grid-heading {
       grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: minmax(0, auto) minmax(18rem, 1fr);
-      align-items: end;
-      gap: 0.75rem 1.5rem;
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 0.35rem;
       color: var(--muted);
       padding-top: 1rem;
       margin-top: 0.75rem;
@@ -709,14 +831,6 @@
       min-width: 820px;
     }
 
-    .today-table {
-      min-width: 640px;
-    }
-
-    .today-action {
-      color: var(--text);
-    }
-
     .action-buy { color: var(--reserve); }
     .action-sell { color: var(--loss); }
     .action-wait { color: var(--simple-sell); }
@@ -813,7 +927,6 @@
       h1 { font-size: 3.1rem; }
       .controls { grid-template-columns: repeat(2, 1fr); }
       .detail-grid { grid-template-columns: 1fr; }
-      .grid-heading { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: 1fr; }
       .outcome-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .activity-filter { justify-content: flex-start; }
@@ -828,12 +941,16 @@
       }
       h1 { font-size: 2.55rem; }
       .panel-head { grid-template-columns: 1fr; }
+      .result-chart-head { grid-template-columns: 1fr; }
+      .result-meta { justify-content: flex-start; }
       .signal-main { grid-template-columns: 1fr; }
       .signal-price { justify-items: start; text-align: left; }
       .signal-phase { font-size: 3rem; }
+      .today-inputs { grid-template-columns: 1fr; }
       .signal-row {
-        grid-template-columns: 0.75rem minmax(0, 1fr) auto;
-        row-gap: 0.25rem;
+        grid-template-columns: 0.5rem minmax(0, 1fr) auto;
+        min-height: 0;
+        row-gap: var(--today-gap-sm);
       }
       .signal-detail {
         grid-column: 2 / -1;
@@ -852,7 +969,7 @@
     <header class="topbar">
       <div class="intro-copy">
         <div class="brand"><span class="brand-badge">bitview</span><span>dca</span></div>
-        <h1>Optimized DCA</h1>
+        <h1>Bitview's Optimized DCA</h1>
         <div class="sub">BTC accumulation driven by Bitview cycle data.</div>
         <p class="cycle-rule">Compare cycle-paced buying, heat trimming, and daily DCA from the same start date.</p>
         <details class="strategy-note">
@@ -864,11 +981,11 @@
           <div id="formulaBlock" class="formula-block" aria-label="Strategy formula"></div>
         </details>
       </div>
-      <section class="latest-signal" aria-label="Latest signal" aria-live="polite">
+      <section class="latest-signal" aria-label="Today simulator" aria-live="polite">
         <div id="signalDate" class="signal-kicker">loading latest date</div>
         <div class="signal-main">
           <div>
-            <div id="signalPhase" class="signal-phase" data-action="wait">wait</div>
+            <div id="signalPhase" class="signal-phase" data-action="today">Today</div>
             <div id="signalContext" class="signal-context">loading Bitview data</div>
           </div>
           <div class="signal-price">
@@ -876,11 +993,36 @@
             <strong id="signalPrice">--</strong>
           </div>
         </div>
+        <div class="today-inputs" aria-label="Current portfolio inputs">
+          <label>USD cash
+            <input id="todayCash" type="number" min="0" step="100" value="10000">
+          </label>
+          <label>BTC held
+            <input id="todayBtc" type="number" min="0" step="0.0001" value="0.1">
+          </label>
+          <label>Monthly
+            <input id="todayMonthly" type="number" min="0" step="100" value="1000">
+          </label>
+        </div>
+        <div class="today-presets" aria-label="Fill from backtest latest">
+          <span>Use backtest</span>
+          <button class="filter-btn" type="button" data-fill-today="simpleHold">Hold</button>
+          <button class="filter-btn" type="button" data-fill-today="simpleSell">Trim</button>
+          <button class="filter-btn" type="button" data-fill-today="dca">DCA</button>
+        </div>
         <div id="signalRows" class="signal-rows"></div>
+        <div id="signalSummary" class="signal-summary">
+          <span id="signalSummaryText"></span>
+          <button id="copyTodaySignal" class="filter-btn" type="button">copy</button>
+        </div>
       </section>
     </header>
 
-    <section class="controls" aria-label="Simulation controls">
+    <section class="controls" aria-label="Backtest assumptions">
+      <div class="control-heading">
+        <div class="title">Backtest assumptions</div>
+        <div>Starting cash, first BTC buy, recurring savings, fees, and tax for the historical run.</div>
+      </div>
       <label class="reserve">Initial cash
         <input id="initialReserve" type="number" min="0" step="100" value="10000">
       </label>
@@ -909,31 +1051,21 @@
       </div>
     </section>
 
-    <section>
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <div class="title">Portfolio value</div>
-            <div id="chartMeta">-</div>
-          </div>
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="title">Backtest result</div>
+          <div>value, ranking, costs, risk, and buying behavior for the selected start date</div>
         </div>
-        <div class="strategy-defs">
-          <span><strong>Hold</strong> buys pain over 150 days.</span>
-          <span><strong>Trim</strong> buys pain and sells heat at 0.65%/day.</span>
-          <span><strong>DCA</strong> buys every day.</span>
+      </div>
+      <div class="result-chart">
+        <div class="result-chart-head">
+          <div class="title">Value over time</div>
+          <div id="chartMeta" class="result-meta">-</div>
         </div>
         <div class="chart-wrap">
           <svg id="equitySvg" role="img" aria-label="Portfolio value chart"></svg>
           <div id="tooltip" class="tooltip"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <div class="title">Results</div>
-          <div>today's action, final outcome, costs, and buying behavior</div>
         </div>
       </div>
       <div id="metrics" class="metrics"></div>
@@ -1164,10 +1296,11 @@
       <div class="panel-head">
         <div>
           <div class="title">Daily activity</div>
-          <div id="activityMeta">all days, newest first</div>
+          <div id="activityMeta">action days, newest first</div>
         </div>
         <div class="activity-filter" aria-label="Daily activity filter">
-          <button class="filter-btn is-active" type="button" data-activity-filter="all">all</button>
+          <button class="filter-btn is-active" type="button" data-activity-filter="actions">actions</button>
+          <button class="filter-btn" type="button" data-activity-filter="all">all</button>
           <button class="filter-btn" type="button" data-activity-filter="buys">buys</button>
           <button class="filter-btn" type="button" data-activity-filter="sells">sells</button>
         </div>
@@ -1224,6 +1357,8 @@
     const DCA_OUT_LOSS_SHARE_MAX = 5;
     const DCA_MIN_PERCENTILE = 0;
     const DCA_MAX_PERCENTILE = 100;
+    const DCA_COLOR_MIN_PERCENTILE = 40;
+    const DCA_COLOR_MAX_PERCENTILE = 100;
     const DCA_OUT_HISTOGRAM_VALUE = -1;
     const CHART_WIDTH_MIN = 320;
     const CHART_WIDTH_FALLBACK = 900;
@@ -1253,11 +1388,17 @@
       monthlyTopup: document.querySelector("#monthlyTopup"),
       tradeFee: document.querySelector("#tradeFee"),
       sellTax: document.querySelector("#sellTax"),
+      todayCash: document.querySelector("#todayCash"),
+      todayBtc: document.querySelector("#todayBtc"),
+      todayMonthly: document.querySelector("#todayMonthly"),
       signalDate: document.querySelector("#signalDate"),
       signalPhase: document.querySelector("#signalPhase"),
       signalContext: document.querySelector("#signalContext"),
       signalPrice: document.querySelector("#signalPrice"),
       signalRows: document.querySelector("#signalRows"),
+      signalSummary: document.querySelector("#signalSummary"),
+      signalSummaryText: document.querySelector("#signalSummaryText"),
+      copyTodaySignal: document.querySelector("#copyTodaySignal"),
       chartMeta: document.querySelector("#chartMeta"),
       historySvg: document.querySelector("#historySvg"),
       equitySvg: document.querySelector("#equitySvg"),
@@ -1283,6 +1424,7 @@
       activityMeta: document.querySelector("#activityMeta"),
       activityRows: document.querySelector("#activityRows"),
       activityFilters: document.querySelectorAll("[data-activity-filter]"),
+      todayFillButtons: document.querySelectorAll("[data-fill-today]"),
       tooltip: document.querySelector("#tooltip"),
       metrics: document.querySelector("#metrics"),
       formulaBlock: document.querySelector("#formulaBlock"),
@@ -1295,7 +1437,7 @@
     let latestRun = null;
     let draggingStart = false;
     let selectedStartDate = "2021-04-14";
-    let activityFilter = "all";
+    let activityFilter = "actions";
     let detailVisible = false;
     let activityVisible = false;
     let detailDirty = true;
@@ -1306,17 +1448,31 @@
     let lastDragRunAt = 0;
     let chartRenderId = 0;
     let activeRunId = 0;
+    let latestTodaySummary = "";
 
     boot();
 
     function boot() {
       applyUrlState();
-      for (const input of [els.initialReserve, els.initialInvested, els.monthlyTopup, els.tradeFee, els.sellTax]) {
+      for (const input of [
+        els.initialReserve,
+        els.initialInvested,
+        els.monthlyTopup,
+        els.tradeFee,
+        els.sellTax,
+        els.todayCash,
+        els.todayBtc,
+        els.todayMonthly,
+      ]) {
         input.addEventListener("input", scheduleRun);
       }
       for (const button of els.activityFilters) {
         button.addEventListener("click", () => setActivityFilter(button.dataset.activityFilter));
       }
+      for (const button of els.todayFillButtons) {
+        button.addEventListener("click", () => fillTodayFromBacktest(button.dataset.fillToday));
+      }
+      els.copyTodaySignal.addEventListener("click", copyTodaySignal);
       window.addEventListener("resize", () => {
         if (latestRun) {
           renderSingle(latestRun);
@@ -1379,6 +1535,9 @@
         initialReserve: numberFrom(els.initialReserve, 10000),
         initialInvested: numberFrom(els.initialInvested, 10000),
         monthlyTopup: numberFrom(els.monthlyTopup, 1000),
+        todayCash: Math.max(0, numberFrom(els.todayCash, 10000)),
+        todayBtc: Math.max(0, numberFrom(els.todayBtc, 0.1)),
+        todayMonthly: Math.max(0, numberFrom(els.todayMonthly, 1000)),
         tradeFeePct,
         tradeFeeRate: tradeFeePct / 100,
         sellTaxPct,
@@ -1402,6 +1561,9 @@
       setNumberInput(els.monthlyTopup, params.get("monthly"));
       setNumberInput(els.tradeFee, params.get("fee"));
       setNumberInput(els.sellTax, params.get("tax"));
+      setNumberInput(els.todayCash, params.get("nowUsd"));
+      setNumberInput(els.todayBtc, params.get("nowBtc"));
+      setNumberInput(els.todayMonthly, params.get("nowMonthly"));
     }
 
     function writeUrlState(opts) {
@@ -1413,6 +1575,9 @@
         url.searchParams.set("monthly", String(opts.monthlyTopup));
         url.searchParams.set("fee", String(opts.tradeFeePct));
         url.searchParams.set("tax", String(opts.sellTaxPct));
+        url.searchParams.set("nowUsd", String(opts.todayCash));
+        url.searchParams.set("nowBtc", String(opts.todayBtc));
+        url.searchParams.set("nowMonthly", String(opts.todayMonthly));
         url.searchParams.delete("trigger");
         url.searchParams.delete("sma");
         history.replaceState(null, "", url);
@@ -1733,6 +1898,49 @@
       return { buyActive, sellArmed, sellFloor };
     }
 
+    function currentCycleState(allRows, index, opts) {
+      let buyActive = false;
+      let sellArmed = false;
+      let sellFloor = null;
+      let buyAgeDays = 0;
+      let buyStartDate = null;
+      let sellStartDate = null;
+
+      for (let i = 0; i <= index; i += 1) {
+        const row = allRows[i];
+        if (touchesBuyTrigger(row, opts)) {
+          if (!buyActive) {
+            buyAgeDays = 0;
+            buyStartDate = row.date;
+          }
+          buyActive = true;
+          sellArmed = false;
+          sellFloor = null;
+          sellStartDate = null;
+        }
+        if (buyActive && isFreshAth(row, allRows[i - 1])) {
+          buyActive = false;
+          sellArmed = true;
+          sellFloor = cycleSellFloor(row, allRows[i - 1]);
+          sellStartDate = row.date;
+        }
+        if (i < index && buyActive) buyAgeDays += 1;
+      }
+
+      const row = allRows[index];
+      const canSell = sellArmed && canTrim(row, sellFloor);
+      return {
+        buyActive,
+        sellArmed,
+        sellFloor,
+        buyAgeDays,
+        buyStartDate,
+        sellStartDate,
+        canSell,
+        phase: cyclePhaseValue(row, buyActive, sellArmed, canSell),
+      };
+    }
+
     function point(row, state) {
       const {
         cash,
@@ -1870,8 +2078,17 @@
       const { opts, result } = run;
       const items = strategyItems(result.series);
       renderFormula(opts);
-      renderLatestSignal(items, opts);
-      els.chartMeta.textContent = `${result.start} -> ${result.end} | cash ${usd(opts.initialReserve)} | start buy ${usd(opts.initialInvested)} | savings ${usd(opts.monthlyTopup)}/mo | buy pace ${CYCLE_ACTIVATION_DAYS}d | trim ${(TRIM_SELL_FRACTION * 100).toFixed(2)}%/day | fee ${opts.tradeFeePct}% | tax ${opts.sellTaxPct}%`;
+      renderTodaySignal(opts);
+      els.chartMeta.innerHTML = [
+        ["period", `${result.start} -> ${result.end}`],
+        ["cash", usd(opts.initialReserve)],
+        ["start buy", usd(opts.initialInvested)],
+        ["monthly", `${usd(opts.monthlyTopup)}/mo`],
+        ["pace", `${CYCLE_ACTIVATION_DAYS}d`],
+        ["trim", `${(TRIM_SELL_FRACTION * 100).toFixed(2)}%/day`],
+        ["fee", `${opts.tradeFeePct}%`],
+        ["tax", `${opts.sellTaxPct}%`],
+      ].map(([label, value]) => `<span><em>${escapeHtml(label)}</em><strong>${escapeHtml(value)}</strong></span>`).join("");
       if (!draggingStart || !updateHistorySelection(els.historySvg, findDateIndex(rows, opts.start))) {
         renderHistoryChart(els.historySvg, opts);
       }
@@ -1906,30 +2123,116 @@
       ].join("");
     }
 
-    function renderLatestSignal(items, opts) {
-      const primary = items.find((item) => item.key === "simpleSell") ?? items[0];
-      const point = primary?.points.at(-1);
-      if (!point) return;
-      const action = todayAction(primary, point);
-      const phase = phaseLabel(point.cyclePhase);
-      const dateLabel = point.date === opts.today ? `today | ${point.date}` : `latest | ${point.date}`;
-      els.signalDate.textContent = dateLabel;
-      els.signalPhase.textContent = signalHeadline(action, phase);
-      els.signalPhase.dataset.action = action;
-      els.signalContext.textContent = `${phase} | ${priceZoneLabel(point.priceZone)} | drawdown ${pct(point.athDrawdown)}`;
-      els.signalPrice.textContent = usd(point.price);
+    function renderTodaySignal(opts) {
+      const row = rows.at(-1);
+      if (!row) return;
+      const state = currentCycleState(rows, rows.length - 1, opts);
+      const items = todaySignalItems(row, state, opts);
+      const phase = phaseLabel(state.phase);
+      const value = opts.todayCash + opts.todayBtc * row.price;
+      els.signalDate.textContent = row.date;
+      els.signalPhase.textContent = "Today";
+      els.signalPhase.dataset.action = "today";
+      els.signalContext.textContent = `${phase} | ${priceZoneLabel(priceZoneValue(row))} | drawdown ${pct(rowAthDrawdown(row))} | value ${usd(value)}`;
+      els.signalPrice.textContent = usd(row.price);
       els.signalRows.innerHTML = items.map((item) => {
-        const last = item.points.at(-1);
-        const itemAction = todayAction(item, last);
+        const point = item.point;
+        const itemAction = todayAction(item, point);
         return `
           <div class="signal-row" data-action="${itemAction}">
             <span class="signal-mark" style="color:${item.color}"></span>
             <span class="signal-name" style="color:${item.color}">${escapeHtml(item.label)}</span>
-            <strong class="signal-action">${todayActionText(item, last)}</strong>
-            <span class="signal-detail">${todayReasonHtml(item, last)}</span>
+            <strong class="signal-action">${todayActionText(item, point)}</strong>
+            <span class="signal-detail">${todayReasonHtml(item, point)}</span>
           </div>
         `;
       }).join("");
+      const summary = todaySummary(row, items);
+      latestTodaySummary = summary.text;
+      els.signalSummaryText.innerHTML = summary.html;
+      els.copyTodaySignal.textContent = "copy";
+    }
+
+    function todaySummary(row, items) {
+      const actionFor = (key) => {
+        const item = items.find((candidate) => candidate.key === key);
+        return item ? todayActionText(item, item.point) : "-";
+      };
+      const price = usd(row.price);
+      const zone = priceZoneLabel(priceZoneValue(row));
+      const hold = actionFor("simpleHold");
+      const trim = actionFor("simpleSell");
+      const dca = actionFor("dca");
+      return {
+        text: `BTC ${price} | zone ${zone} | Hold ${hold} | Trim ${trim} | DCA ${dca}`,
+        html: `BTC <strong>${escapeHtml(price)}</strong> | zone <strong>${escapeHtml(zone)}</strong> | Hold <strong>${escapeHtml(hold)}</strong> | Trim <strong>${escapeHtml(trim)}</strong> | DCA <strong>${escapeHtml(dca)}</strong>`,
+      };
+    }
+
+    function todaySignalItems(row, state, opts) {
+      return [
+        { key: "simpleHold", label: "Hold", color: cssVar("--simple"), point: todayCyclePoint(row, state, opts, false) },
+        { key: "simpleSell", label: "Trim", color: cssVar("--simple-sell"), point: todayCyclePoint(row, state, opts, true) },
+        { key: "dca", label: "DCA", color: cssVar("--dca"), point: todayDcaPoint(row, state, opts) },
+      ];
+    }
+
+    function todayBasePoint(row, state, opts) {
+      return {
+        date: row.date,
+        price: row.price,
+        athDrawdown: rowAthDrawdown(row),
+        cash: opts.todayCash,
+        btc: opts.todayBtc,
+        value: opts.todayCash + opts.todayBtc * row.price,
+        buyUsd: 0,
+        buySpendUsd: 0,
+        sellUsd: 0,
+        sellTargetUsd: 0,
+        buyTargetUsd: 0,
+        buyDcaFloorUsd: opts.todayMonthly / DAYS_PER_MONTH,
+        buyGridUsd: 0,
+        buyPaceUsd: 0,
+        buyPaceBudgetUsd: 0,
+        buyPaceDays: 0,
+        buyMonthlySpendUsd: 0,
+        buyReserveSpendUsd: 0,
+        priceZone: priceZoneValue(row),
+        cyclePhase: state.phase,
+      };
+    }
+
+    function todayCyclePoint(row, state, opts, canSell) {
+      const point = todayBasePoint(row, state, opts);
+      if (state.buyActive && opts.todayCash > 0) {
+        const plan = todayCycleBuyPlan(row, state, opts);
+        point.buyUsd = plan.totalSpend;
+        point.buySpendUsd = plan.totalSpend;
+        point.buyTargetUsd = plan.desiredBuy;
+        point.buyDcaFloorUsd = plan.dcaFloorUsd;
+        point.buyGridUsd = plan.gridUsd;
+        point.buyPaceUsd = plan.paceUsd;
+        point.buyPaceBudgetUsd = plan.paceBudgetUsd;
+        point.buyPaceDays = plan.paceDays;
+        point.buyMonthlySpendUsd = plan.monthlySpend;
+        point.buyReserveSpendUsd = plan.reserveSpend;
+      } else if (canSell && state.canSell && opts.todayBtc > 0) {
+        const target = point.value * TRIM_SELL_FRACTION;
+        point.sellTargetUsd = target;
+        point.sellUsd = Math.min(opts.todayBtc * row.price, target);
+      }
+      return point;
+    }
+
+    function todayDcaPoint(row, state, opts) {
+      const point = todayBasePoint(row, state, opts);
+      const spend = normalDcaBuyAmount(opts.todayCash, opts.todayMonthly);
+      point.buyUsd = spend;
+      point.buySpendUsd = spend;
+      point.buyTargetUsd = spend;
+      point.buyDcaFloorUsd = opts.todayMonthly / DAYS_PER_MONTH;
+      point.buyMonthlySpendUsd = spend;
+      return point;
     }
 
     function initLazyRendering() {
@@ -2005,7 +2308,6 @@
       const best = ranked[0];
       const runnerUp = ranked[1];
       const bestLast = best.points.at(-1);
-      const today = items[0]?.points.at(-1)?.date ?? "today";
       const bestNetGain = best.finalValue - best.contributed;
       const dcaValueDelta = dca ? best.finalValue - dca.finalValue : 0;
       const dcaPctDelta = dca ? relativeDelta(best.finalValue, dca.finalValue) : 0;
@@ -2042,34 +2344,6 @@
             ${outcomeStat("Max drawdown", pct(best.maxDrawdown), best.maxDrawdown > 0 ? "negative" : "neutral")}
             ${outcomeStat("Fees + tax", usd(totalCosts))}
           </div>
-        </div>
-        <div class="outcome-table-wrap">
-          <div class="table-caption">Latest (${today})</div>
-          <table class="outcome-table today-table">
-            <thead>
-              <tr>
-                <th>Strategy</th>
-                <th>Action</th>
-                <th>Value</th>
-                <th>BTC</th>
-                <th>Cash</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map((item) => {
-                const last = item.points.at(-1);
-                return `
-                  <tr>
-                    <td><span class="strategy-cell" style="color:${item.color}"><span class="swatch"></span>${escapeHtml(item.label)}</span></td>
-                    <td class="today-action">${todayActionWithValue(item, last)}</td>
-                    <td style="color:${item.color}">${usd(last.value)}</td>
-                    <td>${btcFmt(last.btc)}</td>
-                    <td>${usd(last.cash)}</td>
-                  </tr>
-                `;
-              }).join("")}
-            </tbody>
-          </table>
         </div>
         <div class="outcome-table-wrap">
           <div class="table-caption">Result</div>
@@ -2156,6 +2430,7 @@
         const day = hold[i];
         const hasBuy = hold[i].buyUsd > 0 || trim[i].buyUsd > 0;
         const hasSell = trim[i].sellUsd > 0;
+        if (activityFilter === "actions" && !hasBuy && !hasSell) continue;
         if (activityFilter === "buys" && !hasBuy) continue;
         if (activityFilter === "sells" && !hasSell) continue;
         total += 1;
@@ -2179,7 +2454,7 @@
     }
 
     function setActivityFilter(value) {
-      activityFilter = value || "all";
+      activityFilter = value || "actions";
       for (const button of els.activityFilters) {
         button.classList.toggle("is-active", button.dataset.activityFilter === activityFilter);
       }
@@ -2187,6 +2462,54 @@
         renderActivityTable(latestRun.result.series);
         activityDirty = false;
       }
+    }
+
+    function fillTodayFromBacktest(key) {
+      const series = latestRun?.result?.series?.[key];
+      const point = series?.points?.at(-1);
+      if (!point) return;
+      els.todayCash.value = String(Math.max(0, Math.round(point.cash)));
+      els.todayBtc.value = String(Number(Math.max(0, point.btc).toFixed(8)));
+      els.todayMonthly.value = String(latestRun.opts.monthlyTopup);
+      scheduleRun(0);
+    }
+
+    async function copyTodaySignal() {
+      if (!latestTodaySummary) return;
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(latestTodaySummary);
+        } else {
+          copyTextFallback(latestTodaySummary);
+        }
+        copied = true;
+      } catch {
+        try {
+          copyTextFallback(latestTodaySummary);
+          copied = true;
+        } catch {
+          copied = false;
+        }
+      }
+      els.copyTodaySignal.textContent = copied ? "copied" : "failed";
+      window.setTimeout(() => {
+        if (els.copyTodaySignal.textContent === "copied" || els.copyTodaySignal.textContent === "failed") {
+          els.copyTodaySignal.textContent = "copy";
+        }
+      }, 1200);
+    }
+
+    function copyTextFallback(text) {
+      const field = document.createElement("textarea");
+      field.value = text;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.left = "-9999px";
+      document.body.append(field);
+      field.select();
+      document.execCommand("copy");
+      field.remove();
     }
 
     function chartFrame(svg, options = {}) {
@@ -3128,6 +3451,35 @@
       };
     }
 
+    function todayCycleBuyPlan(row, state, opts) {
+      const cash = Math.max(0, opts.todayCash);
+      if (cash <= 0) return emptyBuyPlan();
+      const dcaFloorUsd = opts.todayMonthly / DAYS_PER_MONTH;
+      const budgetMonth = Math.max(0, opts.todayMonthly, cash / 36);
+      const baseDaily = budgetMonth / DAYS_PER_MONTH;
+      if (baseDaily <= 0 && dcaFloorUsd <= 0) return emptyBuyPlan();
+      const paceDays = Math.max(1, CYCLE_ACTIVATION_DAYS - state.buyAgeDays);
+      const monthlySpend = Math.min(cash, dcaFloorUsd);
+      const paceBudgetUsd = Math.max(0, cash - monthlySpend);
+      const paceUsd = paceBudgetUsd / paceDays;
+      const gridUsd = baseDaily * buyWeight(row);
+      const desiredBuy = Math.max(dcaFloorUsd, gridUsd, paceUsd);
+      const totalSpend = Math.min(cash, desiredBuy);
+      const fundedByMonthly = Math.min(totalSpend, monthlySpend);
+      const reserveSpend = Math.max(0, totalSpend - fundedByMonthly);
+      return {
+        totalSpend,
+        monthlySpend: fundedByMonthly,
+        reserveSpend,
+        dcaFloorUsd,
+        gridUsd,
+        paceUsd,
+        paceBudgetUsd,
+        paceDays,
+        desiredBuy,
+      };
+    }
+
     function emptyBuyPlan() {
       return {
         totalSpend: 0,
@@ -3152,6 +3504,10 @@
         if (validLevel(level) && row.price <= level) return pctValue;
       }
       return 101;
+    }
+
+    function rowAthDrawdown(row) {
+      return validLevel(row?.ath) ? Math.max(0, 1 - row.price / row.ath) : 0;
     }
 
     function priceZoneLabel(zone) {
@@ -3197,8 +3553,8 @@
 
     function dcaPercentileColor(percentile) {
       if (!Number.isFinite(percentile)) return "transparent";
-      const clamped = clamp(percentile, DCA_MIN_PERCENTILE, DCA_MAX_PERCENTILE);
-      const progress = (clamped - DCA_MIN_PERCENTILE) / (DCA_MAX_PERCENTILE - DCA_MIN_PERCENTILE);
+      const clamped = clamp(percentile, DCA_COLOR_MIN_PERCENTILE, DCA_COLOR_MAX_PERCENTILE);
+      const progress = (clamped - DCA_COLOR_MIN_PERCENTILE) / (DCA_COLOR_MAX_PERCENTILE - DCA_COLOR_MIN_PERCENTILE);
       const hue = 260 - progress * 234;
       return `oklch(0.66 0.18 ${hue})`;
     }
@@ -3433,14 +3789,6 @@
       return "wait";
     }
 
-    function signalHeadline(action, phase) {
-      if (action === "buy") return "buy";
-      if (action === "sell") return "trim";
-      if (phase === "buy") return "buy phase";
-      if (phase === "trim") return "trim";
-      return phase;
-    }
-
     function todayActionText(item, point) {
       const action = todayAction(item, point);
       if (!point || action === "wait") return action;
@@ -3452,7 +3800,7 @@
       const action = todayAction(item, point);
       const actionClass = `action-${action}`;
       if (!point || action === "wait") return `<span class="${actionClass}">${escapeHtml(action)}</span>`;
-      const amount = action === "sell" ? point.sellUsd : point.buyUsd;
+      const amount = action === "sell" ? point.sellUsd : buySpend(point);
       return `<span class="${actionClass}">${escapeHtml(action)}</span> <span class="neutral">${usd(amount)}</span>`;
     }
 
@@ -3462,12 +3810,14 @@
       if (point.buyUsd > 0) {
         const spend = buySpend(point);
         if (item.key === "dca") {
-          return `Daily DCA: spend ${strong(usd(spend))} from savings; doubles only when one month of runway remains.${suffix}`;
+          const daily = point.buyDcaFloorUsd;
+          const multiple = daily > 0 ? Math.max(1, Math.round(spend / daily)) : 1;
+          return `DCA: spend ${strong(usd(spend))} = ${strong(`${multiple}x`)} daily savings (${strong(`${usd(daily)}/day`)}), capped by available USD.${suffix}`;
         }
         const driver = buyDriver(point);
         const monthly = point.buyMonthlySpendUsd;
         const reserve = point.buyReserveSpendUsd;
-        return `Buy: spend ${strong(usd(spend))} = max(1x ${strong(usd(point.buyDcaFloorUsd))}, zone ${strong(usd(point.buyGridUsd))}, ${paceText(point)}); ${strong(driver.label)} wins. Funding: ${strong(usd(monthly))} savings + ${strong(usd(reserve))} reserve.${suffix}`;
+        return `Buy: ${buyTargetText(point, spend)}; ${strong(driver.label)} wins. Funding: ${strong(usd(monthly))} savings + ${strong(usd(reserve))} reserve.${suffix}`;
       }
       if (point.sellUsd > 0) {
         const target = point.sellTargetUsd || point.value * TRIM_SELL_FRACTION;
@@ -3500,6 +3850,15 @@
       return point.buySpendUsd > 0 ? point.buySpendUsd : point.buyUsd;
     }
 
+    function buyTargetText(point, spend) {
+      const target = point.buyTargetUsd || spend;
+      const formula = `max(1x ${strong(usd(point.buyDcaFloorUsd))}, zone ${strong(usd(point.buyGridUsd))}, ${paceText(point)})`;
+      if (spend + 0.5 < target) {
+        return `target ${strong(usd(target))} = ${formula}; spend ${strong(usd(spend))} because available USD caps it`;
+      }
+      return `spend ${strong(usd(spend))} = ${formula}`;
+    }
+
     function paceText(point) {
       const pace = strong(usd(point.buyPaceUsd));
       if (point.buyPaceBudgetUsd > 0 && point.buyPaceDays > 0) {
@@ -3515,6 +3874,7 @@
     function activityMetaText(filter, total) {
       const noun = total === 1 ? "day" : "days";
       const count = fmt(total);
+      if (filter === "actions") return `${count} action ${noun}, newest first`;
       if (filter === "buys") return `${count} buy ${noun}, newest first`;
       if (filter === "sells") return `${count} sell ${noun}, newest first`;
       return `${count} ${noun}, newest first`;
