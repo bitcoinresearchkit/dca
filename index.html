@@ -179,6 +179,37 @@
       margin: 8px 0 0;
     }
 
+    .formula-block {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-left: 2px solid var(--accent);
+      background: var(--light-black);
+      color: var(--dark-white);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.55;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .formula-block div {
+      margin: 0.18rem 0;
+    }
+
+    .formula-block strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .formula-value {
+      display: inline-block;
+      padding: 0 0.22rem;
+      border-radius: 0.2rem;
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+    }
+
     .strategy-note summary {
       display: inline-block;
       color: var(--accent);
@@ -248,11 +279,10 @@
 
     .signal-row {
       display: grid;
-      grid-template-columns: 0.75rem minmax(9.5rem, 1fr) minmax(5.5rem, auto) minmax(7.5rem, auto);
+      grid-template-columns: 0.75rem minmax(7rem, 1fr) minmax(5.5rem, auto);
       align-items: baseline;
       gap: 0.55rem;
       min-width: 0;
-      white-space: nowrap;
     }
 
     .signal-mark {
@@ -272,10 +302,18 @@
     .signal-row[data-action="wait"] .signal-action { color: var(--simple-sell); }
 
     .signal-detail {
+      grid-column: 2 / -1;
       overflow: hidden;
+      color: var(--muted);
+      line-height: 1.35;
+      text-align: left;
+      text-transform: none;
+      white-space: normal;
+    }
+
+    .signal-detail strong {
       color: var(--dark-white);
-      text-align: right;
-      text-overflow: ellipsis;
+      font-weight: 600;
     }
 
     .strategy-defs {
@@ -816,13 +854,14 @@
         <div class="brand"><span class="brand-badge">bitview</span><span>dca</span></div>
         <h1>Optimized DCA</h1>
         <div class="sub">BTC accumulation driven by Bitview cycle data.</div>
-        <p class="cycle-rule">Compare waiting for pain, trimming heat, and buying daily from the same start date.</p>
+        <p class="cycle-rule">Compare cycle-paced buying, heat trimming, and daily DCA from the same start date.</p>
         <details class="strategy-note">
           <summary>How it works</summary>
           <p>p-levels rank BTC supply cost basis. Lower levels usually mark market pain; p95-p100 marks heat.</p>
-          <p>Hold buys when coins-in-loss reaches rare extremes, then stops after a fresh ATH.</p>
-          <p>Trim follows Hold, then sells small slices in heat while price stays above the previous 1-year ATH floor.</p>
+          <p>Hold starts buying when coins-in-loss reaches rare extremes, paces reserve cash over 150 days, keeps at least 1x daily savings buys during the buy phase, then stops after a fresh ATH.</p>
+          <p>Trim follows Hold, then sells 0.65% of portfolio value per eligible heat day while price stays above the previous 1-year ATH floor.</p>
           <p>DCA spends monthly savings as daily orders and only doubles when cash runway can still cover about a month.</p>
+          <div id="formulaBlock" class="formula-block" aria-label="Strategy formula"></div>
         </details>
       </div>
       <section class="latest-signal" aria-label="Latest signal" aria-live="polite">
@@ -879,8 +918,8 @@
           </div>
         </div>
         <div class="strategy-defs">
-          <span><strong>Hold</strong> buys pain only.</span>
-          <span><strong>Trim</strong> buys pain and sells heat.</span>
+          <span><strong>Hold</strong> buys pain over 150 days.</span>
+          <span><strong>Trim</strong> buys pain and sells heat at 0.65%/day.</span>
           <span><strong>DCA</strong> buys every day.</span>
         </div>
         <div class="chart-wrap">
@@ -958,7 +997,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Daily buys</div>
-            <div>buy dollars per day</div>
+            <div>daily buys with 150-day cycle pacing</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -982,7 +1021,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Trim sells</div>
-            <div>sell dollars per day</div>
+            <div>0.65% of portfolio value per eligible heat day</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -1152,7 +1191,7 @@
     </section>
 
     <footer class="assumptions">
-      Trading fees apply to every buy and sell. Trim tax applies only to realized profitable sells. Daily closes, cost-basis percentiles, coins in loss, and 1-year ATH data come from Bitview.
+      Cycle buys pace reserve cash over 150 days and keep at least 1x daily savings buys while active. Trim sells 0.65% of portfolio value per eligible heat day. Trading fees apply to every buy and sell. Trim tax applies only to realized profitable sells. Daily closes, cost-basis percentiles, coins in loss, and 1-year ATH data come from Bitview.
     </footer>
   </main>
 
@@ -1160,7 +1199,7 @@
     "use strict";
 
     const API_BASE = "https://bitview.space";
-    const CACHE_VERSION = "v10";
+    const CACHE_VERSION = "v11";
     const DATA_START = "2012-01-01";
     const DISPLAY_START = "2016-01-01";
     const DAYS_PER_MONTH = 31;
@@ -1168,13 +1207,14 @@
     const DAILY_DCA_MAX_MULTIPLE = 2;
     const MIN_EVENT_HISTORY_DAYS = 365 * 4;
     const SUPPLY_IN_LOSS_TRIGGER_MAX_PERCENT = 1;
-    const PCTS = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40];
+    const PCTS = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5];
     const PCTS_ASC = [...PCTS].reverse();
     const SIMPLE_GRID = new Map([
       [100, 1], [95, 1.5], [90, 2], [85, 2.5], [80, 3], [75, 3.5], [70, 4],
-      [65, 4.5], [60, 5], [55, 5.5], [50, 6], [45, 6.5], [40, 7],
+      [65, 4.5], [60, 5], [55, 5.5], [50, 6], [45, 6.5], [40, 7], [35, 7.5],
+      [30, 8], [25, 8.5], [20, 9], [15, 9.5], [10, 10], [5, 10.5],
     ]);
-    const CYCLE_BUY_FLOOR_FRACTION = 0.0065;
+    const CYCLE_ACTIVATION_DAYS = 150;
     const TRIM_SELL_FRACTION = 0.0065;
     const DCA_HISTOGRAM_ALPHA = 0.75;
     const DCA_IN_MIN_MULTIPLIER = 1;
@@ -1182,7 +1222,7 @@
     const DCA_LOSS_SHARE_STEP = 5;
     const DCA_MAX_MULTIPLIER = 7;
     const DCA_OUT_LOSS_SHARE_MAX = 5;
-    const DCA_MIN_PERCENTILE = 40;
+    const DCA_MIN_PERCENTILE = 0;
     const DCA_MAX_PERCENTILE = 100;
     const DCA_OUT_HISTOGRAM_VALUE = -1;
     const CHART_WIDTH_MIN = 320;
@@ -1245,6 +1285,7 @@
       activityFilters: document.querySelectorAll("[data-activity-filter]"),
       tooltip: document.querySelector("#tooltip"),
       metrics: document.querySelector("#metrics"),
+      formulaBlock: document.querySelector("#formulaBlock"),
     };
 
     let rows = [];
@@ -1330,7 +1371,7 @@
     function readOptions() {
       const today = todayString();
       const tradeFeePct = Math.max(0, numberFrom(els.tradeFee, 1));
-      const sellTaxPct = Math.max(0, numberFrom(els.sellTax, 30));
+      const sellTaxPct = Math.max(0, numberFrom(els.sellTax, 0));
       return {
         start: selectedStartDate,
         today,
@@ -1509,30 +1550,44 @@
       let btc = initialTrade.btc;
       let costBasis = initialTrade.costBasis;
       let contributed = opts.initialReserve + opts.initialInvested;
+      let monthlyDcaCash = 0;
       let totalFeeUsd = initialTrade.feeUsd;
       let totalTaxUsd = 0;
       let { buyActive, sellArmed, sellFloor } = inferPhase(allRows, startIndex, opts);
+      let buyBudget = buyActive ? cycleBuyBudget(cash - monthlyDcaCash) : null;
       const points = [];
 
       for (let i = startIndex; i < allRows.length; i += 1) {
         const row = allRows[i];
         let buyUsd = 0;
+        let buySpendUsd = 0;
         let sellUsd = 0;
+        let sellTargetUsd = 0;
         let feeUsd = 0;
         let taxUsd = 0;
+        let monthTopupAdded = 0;
+        let buyPlan = null;
 
         if (i > startIndex && isMonthStart(row.date)) {
           cash += opts.monthlyTopup;
+          monthTopupAdded = opts.monthlyTopup;
+          if (buyActive) monthlyDcaCash += opts.monthlyTopup;
           contributed += opts.monthlyTopup;
         }
 
         if (touchesBuyTrigger(row, opts)) {
+          if (!buyActive) {
+            if (monthTopupAdded > 0) monthlyDcaCash += monthTopupAdded;
+            buyBudget = cycleBuyBudget(cash - monthlyDcaCash);
+          }
           buyActive = true;
           sellArmed = false;
           sellFloor = null;
         }
         if (buyActive && isFreshAth(row, allRows[i - 1])) {
           buyActive = false;
+          buyBudget = null;
+          monthlyDcaCash = 0;
           sellArmed = true;
           sellFloor = cycleSellFloor(row, allRows[i - 1]);
         }
@@ -1541,6 +1596,7 @@
         const phase = cyclePhaseValue(row, buyActive, sellArmed, canSell);
 
         if (sellRule && canSell && btc > 0) {
+          sellTargetUsd = (cash + btc * row.price) * TRIM_SELL_FRACTION;
           const btcToSell = trimSellBtc(row, cash, btc, sellRule);
           const basisToRemove = btc > 0 ? costBasis * (btcToSell / btc) : 0;
           sellUsd = btcToSell * row.price;
@@ -1553,14 +1609,20 @@
         }
 
         if (buyActive && cash > 0) {
-          const trade = buyTrade(row, Math.min(cash, cycleBuyUsd(row, cash, btc, opts)), opts.tradeFeeRate);
+          if (!buyBudget) buyBudget = cycleBuyBudget(cash - monthlyDcaCash);
+          buyPlan = cycleBuyPlan(row, cash, monthlyDcaCash, opts, buyBudget);
+          const trade = buyTrade(row, buyPlan.totalSpend, opts.tradeFeeRate);
           if (trade.totalSpend > 0) {
             btc += trade.btc;
             costBasis += trade.costBasis;
             cash -= trade.totalSpend;
+            monthlyDcaCash = Math.max(0, monthlyDcaCash - buyPlan.monthlySpend);
             buyUsd = trade.buyUsd;
+            buySpendUsd = trade.totalSpend;
             feeUsd += trade.feeUsd;
+            buyBudget.spent += buyPlan.reserveSpend;
           }
+          buyBudget.ageDays += 1;
         }
 
         totalFeeUsd += feeUsd;
@@ -1577,6 +1639,16 @@
           taxUsd,
           totalFeeUsd,
           totalTaxUsd,
+          buySpendUsd,
+          buyTargetUsd: buyPlan?.desiredBuy ?? 0,
+          buyDcaFloorUsd: buyPlan?.dcaFloorUsd ?? 0,
+          buyGridUsd: buyPlan?.gridUsd ?? 0,
+          buyPaceUsd: buyPlan?.paceUsd ?? 0,
+          buyPaceBudgetUsd: buyPlan?.paceBudgetUsd ?? 0,
+          buyPaceDays: buyPlan?.paceDays ?? 0,
+          buyMonthlySpendUsd: buyPlan?.monthlySpend ?? 0,
+          buyReserveSpendUsd: buyPlan?.reserveSpend ?? 0,
+          sellTargetUsd,
           atBuyTrigger: touchesBuyTrigger(row, opts),
           cyclePhase: phase,
         }));
@@ -1601,6 +1673,7 @@
 
       slice.forEach((row, i) => {
         let buyUsd = 0;
+        let buySpendUsd = 0;
         let feeUsd = 0;
 
         if (i > 0 && isMonthStart(row.date)) {
@@ -1614,6 +1687,7 @@
           costBasis += trade.costBasis;
           cash -= trade.totalSpend;
           buyUsd = trade.buyUsd;
+          buySpendUsd = trade.totalSpend;
           feeUsd = trade.feeUsd;
         }
         totalFeeUsd += feeUsd;
@@ -1624,6 +1698,7 @@
           costBasis,
           monthlyTopup: opts.monthlyTopup,
           buyUsd,
+          buySpendUsd,
           feeUsd,
           totalFeeUsd,
           totalTaxUsd,
@@ -1671,6 +1746,16 @@
         taxUsd = 0,
         totalFeeUsd = feeUsd,
         totalTaxUsd = taxUsd,
+        buySpendUsd = 0,
+        buyTargetUsd = 0,
+        buyDcaFloorUsd = 0,
+        buyGridUsd = 0,
+        buyPaceUsd = 0,
+        buyPaceBudgetUsd = 0,
+        buyPaceDays = 0,
+        buyMonthlySpendUsd = 0,
+        buyReserveSpendUsd = 0,
+        sellTargetUsd = 0,
         atBuyTrigger = false,
         cyclePhase = 0,
       } = state;
@@ -1692,6 +1777,16 @@
         taxUsd,
         totalFeeUsd,
         totalTaxUsd,
+        buySpendUsd,
+        buyTargetUsd,
+        buyDcaFloorUsd,
+        buyGridUsd,
+        buyPaceUsd,
+        buyPaceBudgetUsd,
+        buyPaceDays,
+        buyMonthlySpendUsd,
+        buyReserveSpendUsd,
+        sellTargetUsd,
         atBuyTrigger,
         priceZone: priceZoneValue(row),
         cyclePhase,
@@ -1774,8 +1869,9 @@
     function renderSingle(run) {
       const { opts, result } = run;
       const items = strategyItems(result.series);
+      renderFormula(opts);
       renderLatestSignal(items, opts);
-      els.chartMeta.textContent = `${result.start} -> ${result.end} | cash ${usd(opts.initialReserve)} | start buy ${usd(opts.initialInvested)} | savings ${usd(opts.monthlyTopup)}/mo | fee ${opts.tradeFeePct}% | tax ${opts.sellTaxPct}%`;
+      els.chartMeta.textContent = `${result.start} -> ${result.end} | cash ${usd(opts.initialReserve)} | start buy ${usd(opts.initialInvested)} | savings ${usd(opts.monthlyTopup)}/mo | buy pace ${CYCLE_ACTIVATION_DAYS}d | trim ${(TRIM_SELL_FRACTION * 100).toFixed(2)}%/day | fee ${opts.tradeFeePct}% | tax ${opts.sellTaxPct}%`;
       if (!draggingStart || !updateHistorySelection(els.historySvg, findDateIndex(rows, opts.start))) {
         renderHistoryChart(els.historySvg, opts);
       }
@@ -1783,6 +1879,31 @@
       renderMetrics(items, opts);
       markLazySectionsDirty();
       renderVisibleLazySections();
+    }
+
+    function renderFormula(opts) {
+      if (!els.formulaBlock) return;
+      const baseMonth = cycleBudgetMonth(opts);
+      const baseDay = baseMonth / DAYS_PER_MONTH;
+      const dcaDay = opts.monthlyTopup / DAYS_PER_MONTH;
+      const exampleZoneWeight = 5;
+      const exampleWeightedBuy = baseDay * exampleZoneWeight;
+      const examplePortfolioValue = opts.initialReserve + opts.initialInvested;
+      const trimSellUsd = examplePortfolioValue * TRIM_SELL_FRACTION;
+      const activationBudget = Math.max(0, opts.initialReserve);
+      const startingPace = activationBudget / CYCLE_ACTIVATION_DAYS;
+      const exampleTarget = Math.max(dcaDay, exampleWeightedBuy, startingPace);
+      const exampleReserveBuy = Math.max(0, exampleTarget - dcaDay);
+      const v = (value) => `<span class="formula-value">${escapeHtml(value)}</span>`;
+      const row = (label, body) => `<div><strong>${escapeHtml(label)}</strong>: ${body}</div>`;
+      els.formulaBlock.innerHTML = [
+        row("Monthly budget", `Use the larger of monthly savings and initial cash spread over 36 months. Here: max(${v(usd(opts.monthlyTopup))}, ${v(usd(opts.initialReserve / 36))}) = ${v(`${usd(baseMonth)}/mo`)}, or ${v(`${usd(baseDay)}/day`)}.`),
+        row("Pain multiplier", `Let p be the current cost-basis percentile. Buy multiplier = 1 + (100 - p) / 10. Examples: p100 = ${v("1x")}, p60 = ${v("5x")}, p5 = ${v("10.5x")}, p0 = ${v("11x")}.`),
+        row("Activation pace", `When the buy phase starts, set activationBudget = cash minus this month's savings. Spend that budget across ${v(`${CYCLE_ACTIVATION_DAYS} days`)}. Start example: ${v(usd(activationBudget))} / ${v(String(CYCLE_ACTIVATION_DAYS))} = ${v(`${usd(startingPace)}/day`)}.`),
+        row("Daily buy target", `Each active day, target the largest of: normal DCA (${v(`${usd(dcaDay)}/day`)}), pain multiplier buy, and activation pace. Example at p60: max(${v(usd(dcaDay))}, ${v(usd(exampleWeightedBuy))}, ${v(usd(startingPace))}) = ${v(`${usd(exampleTarget)}/day`)}.`),
+        row("Buy funding", `This month's savings fund up to ${v(`${usd(dcaDay)}/day`)} first. Extra buy demand comes from reserve cash. In the p60 example: ${v(`${usd(dcaDay)}/day`)} savings + ${v(`${usd(exampleReserveBuy)}/day`)} reserve.`),
+        row("Trim sell", `When the heat rule is active, first compute portfolio value = cash + BTC value. Then sell ${v((TRIM_SELL_FRACTION * 100).toFixed(2) + "%")} of that value in BTC. Start example: ${v(usd(examplePortfolioValue))} x ${v("0.0065")} = ${v(`${usd(trimSellUsd)}/day`)}. If you hold less BTC than the target amount, sell the BTC you have left.`),
+      ].join("");
     }
 
     function renderLatestSignal(items, opts) {
@@ -1805,7 +1926,7 @@
             <span class="signal-mark" style="color:${item.color}"></span>
             <span class="signal-name" style="color:${item.color}">${escapeHtml(item.label)}</span>
             <strong class="signal-action">${todayActionText(item, last)}</strong>
-            <span class="signal-detail">${usd(last.value)} | ${btcFmt(last.btc)}</span>
+            <span class="signal-detail">${todayReasonHtml(item, last)}</span>
           </div>
         `;
       }).join("");
@@ -2955,6 +3076,11 @@
     }
 
     function buyWeight(row) {
+      const p5 = row.levels.get(5);
+      if (validLevel(p5) && row.price <= p5) {
+        const estimatedPct = clamp((row.price / p5) * 5, 0, 5);
+        return 1 + (100 - estimatedPct) / 10;
+      }
       let weight = 0;
       for (const [pct, pctWeight] of SIMPLE_GRID) {
         const level = row.levels.get(pct);
@@ -2963,10 +3089,57 @@
       return weight;
     }
 
-    function cycleBuyUsd(row, cash, btc, opts) {
-      const gridUsd = opts.monthlyTopup / DAYS_PER_MONTH * buyWeight(row);
-      const portfolioValue = cash + btc * row.price;
-      return Math.max(gridUsd, portfolioValue * CYCLE_BUY_FLOOR_FRACTION);
+    function cycleBudgetMonth(opts) {
+      return Math.max(0, opts.monthlyTopup, opts.initialReserve / 36);
+    }
+
+    function cycleBuyBudget(cash) {
+      return {
+        ageDays: 0,
+        spent: 0,
+        budget: Math.max(0, cash),
+      };
+    }
+
+    function cycleBuyPlan(row, cash, monthlyDcaCash, opts, buyBudget) {
+      if (!buyBudget || cash <= 0) return emptyBuyPlan();
+      const remainingBudget = Math.max(0, buyBudget.budget - buyBudget.spent);
+      const budgetMonth = cycleBudgetMonth(opts);
+      const baseDaily = budgetMonth / DAYS_PER_MONTH;
+      if (baseDaily <= 0) return emptyBuyPlan();
+      const remainingDays = Math.max(1, CYCLE_ACTIVATION_DAYS - buyBudget.ageDays);
+      const paceUsd = remainingBudget > 0 ? remainingBudget / remainingDays : 0;
+      const dcaFloorUsd = opts.monthlyTopup / DAYS_PER_MONTH;
+      const gridUsd = baseDaily * buyWeight(row);
+      const desiredBuy = Math.max(dcaFloorUsd, gridUsd, paceUsd);
+      const monthlySpend = Math.min(cash, monthlyDcaCash, dcaFloorUsd);
+      const reserveCash = Math.max(0, cash - monthlyDcaCash);
+      const reserveSpend = Math.min(reserveCash, Math.max(0, desiredBuy - monthlySpend));
+      return {
+        totalSpend: monthlySpend + reserveSpend,
+        monthlySpend,
+        reserveSpend,
+        dcaFloorUsd,
+        gridUsd,
+        paceUsd,
+        paceBudgetUsd: remainingBudget,
+        paceDays: remainingDays,
+        desiredBuy,
+      };
+    }
+
+    function emptyBuyPlan() {
+      return {
+        totalSpend: 0,
+        monthlySpend: 0,
+        reserveSpend: 0,
+        dcaFloorUsd: 0,
+        gridUsd: 0,
+        paceUsd: 0,
+        paceBudgetUsd: 0,
+        paceDays: 0,
+        desiredBuy: 0,
+      };
     }
 
     function touchesBuyTrigger(row) {
@@ -3271,7 +3444,7 @@
     function todayActionText(item, point) {
       const action = todayAction(item, point);
       if (!point || action === "wait") return action;
-      const amount = action === "sell" ? point.sellUsd : point.buyUsd;
+      const amount = action === "sell" ? point.sellUsd : buySpend(point);
       return `${action} ${usd(amount)}`;
     }
 
@@ -3281,6 +3454,62 @@
       if (!point || action === "wait") return `<span class="${actionClass}">${escapeHtml(action)}</span>`;
       const amount = action === "sell" ? point.sellUsd : point.buyUsd;
       return `<span class="${actionClass}">${escapeHtml(action)}</span> <span class="neutral">${usd(amount)}</span>`;
+    }
+
+    function todayReasonHtml(item, point) {
+      if (!point) return "";
+      const suffix = ` <strong>${usd(point.value)}</strong> | ${btcFmt(point.btc)}`;
+      if (point.buyUsd > 0) {
+        const spend = buySpend(point);
+        if (item.key === "dca") {
+          return `Daily DCA: spend ${strong(usd(spend))} from savings; doubles only when one month of runway remains.${suffix}`;
+        }
+        const driver = buyDriver(point);
+        const monthly = point.buyMonthlySpendUsd;
+        const reserve = point.buyReserveSpendUsd;
+        return `Buy: spend ${strong(usd(spend))} = max(1x ${strong(usd(point.buyDcaFloorUsd))}, zone ${strong(usd(point.buyGridUsd))}, ${paceText(point)}); ${strong(driver.label)} wins. Funding: ${strong(usd(monthly))} savings + ${strong(usd(reserve))} reserve.${suffix}`;
+      }
+      if (point.sellUsd > 0) {
+        const target = point.sellTargetUsd || point.value * TRIM_SELL_FRACTION;
+        const targetText = point.sellUsd + 1e-9 < target ? "remaining BTC" : `${usd(target)}`;
+        return `Sell because heat rule is active: ${strong((TRIM_SELL_FRACTION * 100).toFixed(2) + "%")} of portfolio value = ${strong(targetText)}.${suffix}`;
+      }
+      const phase = phaseLabel(point.cyclePhase);
+      if (item.key === "dca") return `Daily DCA waits when cash is below the next order size.${suffix}`;
+      if (phase === "buy") return `Buy phase is active, but there is no available cash for a new order today.${suffix}`;
+      if (phase === "trim") return item.key === "simpleSell"
+        ? `Heat rule is active, but there is no BTC left to trim today.${suffix}`
+        : `Hold never trims; it waits after the buy phase ends.${suffix}`;
+      if (phase === "hold") return item.key === "simpleSell"
+        ? `Trim is armed, but price is not in the heat sell band today.${suffix}`
+        : `Hold waits after the buy phase and does not sell heat.${suffix}`;
+      return `Waiting for a rare coins-in-loss trigger.${suffix}`;
+    }
+
+    function buyDriver(point) {
+      const options = [
+        { label: "1x daily savings", value: point.buyDcaFloorUsd },
+        { label: "zone weight", value: point.buyGridUsd },
+        { label: "150-day pace", value: point.buyPaceUsd },
+      ].sort((a, b) => b.value - a.value);
+      return options[0] ?? { label: "buy rule", value: 0 };
+    }
+
+    function buySpend(point) {
+      if (!point) return 0;
+      return point.buySpendUsd > 0 ? point.buySpendUsd : point.buyUsd;
+    }
+
+    function paceText(point) {
+      const pace = strong(usd(point.buyPaceUsd));
+      if (point.buyPaceBudgetUsd > 0 && point.buyPaceDays > 0) {
+        return `pace ${pace} = ${strong(usd(point.buyPaceBudgetUsd))}/${strong(`${fmt(point.buyPaceDays)}d`)}`;
+      }
+      return `pace ${pace}`;
+    }
+
+    function strong(value) {
+      return `<strong>${escapeHtml(value)}</strong>`;
     }
 
     function activityMetaText(filter, total) {
