@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bitview Optimized DCA</title>
+  <title>Bitview DCA</title>
   <style>
     :root {
       color-scheme: dark;
@@ -124,10 +124,10 @@
     }
 
     h1 {
-      max-width: 9ch;
-      margin: 1rem 0 1rem;
+      max-width: 14ch;
+      margin: 0.75rem 0 0.875rem;
       font-family: var(--serif);
-      font-size: 4rem;
+      font-size: 3.5rem;
       line-height: 1;
     }
 
@@ -221,7 +221,7 @@
 
     .signal-phase[data-action="buy"] { color: var(--reserve); }
     .signal-phase[data-action="sell"] { color: var(--loss); }
-    .signal-phase[data-action="hodl"] { color: var(--simple-sell); }
+    .signal-phase[data-action="wait"] { color: var(--simple-sell); }
 
     .signal-context {
       margin-top: 0.4rem;
@@ -269,7 +269,7 @@
 
     .signal-row[data-action="buy"] .signal-action { color: var(--reserve); }
     .signal-row[data-action="sell"] .signal-action { color: var(--loss); }
-    .signal-row[data-action="hodl"] .signal-action { color: var(--simple-sell); }
+    .signal-row[data-action="wait"] .signal-action { color: var(--simple-sell); }
 
     .signal-detail {
       overflow: hidden;
@@ -576,14 +576,24 @@
       min-width: 0;
     }
 
+    .outcome-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 1rem 2rem;
+    }
+
     .outcome-lead .label {
       color: var(--muted);
       margin-bottom: 8px;
+      font-size: 0.75rem;
+      line-height: 1;
+      text-transform: uppercase;
     }
 
     .outcome-lead-main {
       font-family: var(--serif);
-      font-size: 2rem;
+      font-size: 2.4rem;
       line-height: 1.15;
       overflow-wrap: anywhere;
     }
@@ -595,24 +605,58 @@
       max-width: 960px;
     }
 
+    .outcome-today {
+      display: grid;
+      justify-items: end;
+      gap: 0.45rem;
+      min-width: 10rem;
+      color: var(--muted);
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .outcome-today strong {
+      color: var(--text);
+      font-size: 1rem;
+      line-height: 1.2;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
     .outcome-reason {
       color: var(--text);
-      margin-top: 8px;
+      margin-top: 10px;
       line-height: 1.45;
       max-width: 960px;
     }
 
-    .outcome-facts {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 24px;
-      margin-top: 12px;
+    .outcome-stats {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(7.5rem, 1fr));
+      gap: 0.75rem 1.25rem;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
       color: var(--muted);
       line-height: 1.45;
     }
 
-    .outcome-facts strong {
+    .outcome-stat {
+      min-width: 0;
+    }
+
+    .outcome-stat span {
+      display: block;
+      font-size: 0.75rem;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .outcome-stat strong {
+      display: block;
+      margin-top: 0.4rem;
       color: var(--text);
+      overflow-wrap: anywhere;
     }
 
     .outcome-table-wrap {
@@ -637,7 +681,7 @@
 
     .action-buy { color: var(--reserve); }
     .action-sell { color: var(--loss); }
-    .action-hodl { color: var(--simple-sell); }
+    .action-wait { color: var(--simple-sell); }
 
     .table-caption {
       color: var(--muted);
@@ -728,11 +772,12 @@
 
     @media (max-width: 980px) {
       .topbar { grid-template-columns: 1fr; }
-      h1 { font-size: 3.25rem; }
+      h1 { font-size: 3.1rem; }
       .controls { grid-template-columns: repeat(2, 1fr); }
       .detail-grid { grid-template-columns: 1fr; }
       .grid-heading { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: 1fr; }
+      .outcome-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .activity-filter { justify-content: flex-start; }
     }
 
@@ -743,7 +788,7 @@
         --section-gap: 1.25rem;
         --grid-gap: 0.75rem;
       }
-      h1 { font-size: 2.75rem; }
+      h1 { font-size: 2.55rem; }
       .panel-head { grid-template-columns: 1fr; }
       .signal-main { grid-template-columns: 1fr; }
       .signal-price { justify-items: start; text-align: left; }
@@ -757,6 +802,9 @@
         text-align: left;
       }
       .controls { grid-template-columns: 1fr; }
+      .outcome-summary { grid-template-columns: 1fr; }
+      .outcome-today { justify-items: start; text-align: left; }
+      .outcome-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
   </style>
@@ -765,25 +813,24 @@
   <main class="app">
     <header class="topbar">
       <div class="intro-copy">
-        <div class="brand"><span class="brand-badge">brk</span><span>dca</span></div>
-        <h1>Bitview Optimized DCA</h1>
-        <div class="sub">Pick a start date and savings plan, then compare daily DCA with cycle-aware buying and trimming.</div>
-        <p class="cycle-rule">Cycle strategies wait with cash, then buy when coins in loss reaches a top 1% raw historical extreme.
-          They stop new buys when BTC reaches a fresh all-time high (ATH).
-        </p>
+        <div class="brand"><span class="brand-badge">bitview</span><span>dca</span></div>
+        <h1>Optimized DCA</h1>
+        <div class="sub">BTC accumulation driven by Bitview cycle data.</div>
+        <p class="cycle-rule">Compare waiting for pain, trimming heat, and buying daily from the same start date.</p>
         <details class="strategy-note">
           <summary>How it works</summary>
-          <p>p-levels are supply cost-basis percentiles: the buy price of the BTC supply at that percentile. p50 means BTC is near the median coin cost basis; lower p-levels usually mean deeper market pain, higher p-levels usually mean heat.</p>
-          <p>All cycle strategies use the same buy rule: once the buy phase is active, buy the larger of the p-level grid amount or 0.65% of portfolio value per day. Cycle Trim sells BTC worth 0.65% of portfolio value per day near p95-p100, but never below the prior 1-year ATH captured when trim mode starts.</p>
-          <p>Daily DCA uses one fixed daily order size based on a 31-day month. It only switches to 2x when enough cash remains to keep buying every day for about a month.</p>
+          <p>p-levels rank BTC supply cost basis. Lower levels usually mark market pain; p95-p100 marks heat.</p>
+          <p>Hold buys when coins-in-loss reaches rare extremes, then stops after a fresh ATH.</p>
+          <p>Trim follows Hold, then sells small slices in heat while price stays above the previous 1-year ATH floor.</p>
+          <p>DCA spends monthly savings as daily orders and only doubles when cash runway can still cover about a month.</p>
         </details>
       </div>
       <section class="latest-signal" aria-label="Latest signal" aria-live="polite">
-        <div id="signalDate" class="signal-kicker">latest signal | loading</div>
+        <div id="signalDate" class="signal-kicker">loading latest date</div>
         <div class="signal-main">
           <div>
-            <div id="signalPhase" class="signal-phase" data-action="hodl">loading</div>
-            <div id="signalContext" class="signal-context">waiting for Bitview data</div>
+            <div id="signalPhase" class="signal-phase" data-action="wait">wait</div>
+            <div id="signalContext" class="signal-context">loading Bitview data</div>
           </div>
           <div class="signal-price">
             <span>BTC</span>
@@ -795,10 +842,10 @@
     </header>
 
     <section class="controls" aria-label="Simulation controls">
-      <label class="reserve">Starting cash
+      <label class="reserve">Initial cash
         <input id="initialReserve" type="number" min="0" step="100" value="10000">
       </label>
-      <label class="invested">Starting BTC buy
+      <label class="invested">Initial BTC buy
         <input id="initialInvested" type="number" min="0" step="100" value="10000">
       </label>
       <label class="topup">Monthly savings
@@ -832,8 +879,8 @@
           </div>
         </div>
         <div class="strategy-defs">
-          <span><strong>Hold</strong> buys pain, never sells.</span>
-          <span><strong>Trim</strong> buys pain, trims heat.</span>
+          <span><strong>Hold</strong> buys pain only.</span>
+          <span><strong>Trim</strong> buys pain and sells heat.</span>
           <span><strong>DCA</strong> buys every day.</span>
         </div>
         <div class="chart-wrap">
@@ -846,8 +893,8 @@
     <section class="panel">
       <div class="panel-head">
         <div>
-          <div class="title">Outcomes</div>
-          <div>answer first: winner, return, BTC, cash, and pain</div>
+          <div class="title">Results</div>
+          <div>today's action, final outcome, costs, and buying behavior</div>
         </div>
       </div>
       <div id="metrics" class="metrics"></div>
@@ -855,19 +902,19 @@
 
     <section id="detailSection" class="detail-grid" aria-label="Portfolio detail charts">
       <div class="grid-heading">
-        <div class="title">What happened to the money</div>
-        <div>BTC stacked, cash held back, buys, average entry, trims, fees, and taxes.</div>
+        <div class="title">Portfolio mechanics</div>
+        <div>BTC, cash, exposure, flows, basis, fees, and taxes.</div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="title">BTC stacked</div>
-            <div>stack size over time</div>
+            <div class="title">BTC held</div>
+            <div>BTC held over time</div>
           </div>
         </div>
         <div class="small-chart-wrap">
-          <svg id="btcSvg" role="img" aria-label="BTC stacked chart"></svg>
+          <svg id="btcSvg" role="img" aria-label="BTC held chart"></svg>
         </div>
       </div>
 
@@ -875,7 +922,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Cash left</div>
-            <div>uninvested cash by strategy</div>
+            <div>uninvested reserve</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -886,8 +933,32 @@
       <div class="panel">
         <div class="panel-head">
           <div>
+            <div class="title">Cash runway</div>
+            <div>months of savings left</div>
+          </div>
+        </div>
+        <div class="small-chart-wrap">
+          <svg id="cashRunwaySvg" role="img" aria-label="Cash runway chart"></svg>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="title">BTC exposure</div>
+            <div>share of value in BTC</div>
+          </div>
+        </div>
+        <div class="small-chart-wrap">
+          <svg id="exposureSvg" role="img" aria-label="BTC exposure chart"></svg>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
             <div class="title">Daily buys</div>
-            <div>cash deployed each day</div>
+            <div>buy dollars per day</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -899,7 +970,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Average buy price</div>
-            <div>remaining BTC cost basis vs spot price</div>
+            <div>average cost vs BTC price</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -911,7 +982,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Trim sells</div>
-            <div>cash raised by trimming BTC</div>
+            <div>sell dollars per day</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -923,7 +994,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Fees paid</div>
-            <div>cumulative trading fees paid</div>
+            <div>cumulative trading fees</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -935,7 +1006,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Taxes paid</div>
-            <div>cumulative tax paid on profitable trims</div>
+            <div>cumulative trim tax</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -944,15 +1015,15 @@
       </div>
 
       <div class="grid-heading">
-        <div class="title">How painful it was</div>
-        <div>Drawdowns and how long each strategy sat below money put in.</div>
+        <div class="title">Risk and pain</div>
+        <div>Drawdowns and days below deposits.</div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="title">Portfolio drawdown</div>
-            <div>strategy drops plus BTC spot drawdown in white</div>
+            <div class="title">Drawdown</div>
+            <div>current drop from each strategy peak</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -975,8 +1046,8 @@
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="title">Below-deposit streak</div>
-            <div>current stretch at or below money put in</div>
+            <div class="title">Below deposits streak</div>
+            <div>current run at or below deposits</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -988,7 +1059,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Days above deposits</div>
-            <div>cumulative days above money put in</div>
+            <div>cumulative days in profit</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -999,8 +1070,8 @@
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="title">Days at/below deposits</div>
-            <div>cumulative days at or below money put in</div>
+            <div class="title">Days not above deposits</div>
+            <div>cumulative days not yet in profit</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -1009,15 +1080,15 @@
       </div>
 
       <div class="grid-heading">
-        <div class="title">Why the cycle rule acted</div>
-        <div>Market zone, coins in loss, cycle state, cash runway, and BTC exposure.</div>
+        <div class="title">Cycle inputs</div>
+        <div>Zone, coins-in-loss rank, and current cycle state.</div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="title">Market pain / heat zone</div>
-            <div>overall supply cost-basis percentile</div>
+            <div class="title">Market zone</div>
+            <div>cost-basis percentile band</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -1028,8 +1099,8 @@
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="title">Coins in loss percentile</div>
-            <div>raw coins in loss vs prior history</div>
+            <div class="title">Coins in loss</div>
+            <div>historical rank, shown as %</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -1041,35 +1112,11 @@
         <div class="panel-head">
           <div>
             <div class="title">Cycle state</div>
-            <div>waiting, buying, holding, or trimming</div>
+            <div>wait, buy, hold, or trim</div>
           </div>
         </div>
         <div class="small-chart-wrap">
           <svg id="cyclePhaseSvg" role="img" aria-label="Cycle state chart"></svg>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <div class="title">Months of cash left</div>
-            <div>cash reserve measured in monthly savings</div>
-          </div>
-        </div>
-        <div class="small-chart-wrap">
-          <svg id="cashRunwaySvg" role="img" aria-label="Months of cash left chart"></svg>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <div class="title">BTC share of portfolio</div>
-            <div>BTC value as share of total portfolio</div>
-          </div>
-        </div>
-        <div class="small-chart-wrap">
-          <svg id="exposureSvg" role="img" aria-label="BTC share of portfolio chart"></svg>
         </div>
       </div>
     </section>
@@ -1082,8 +1129,8 @@
         </div>
         <div class="activity-filter" aria-label="Daily activity filter">
           <button class="filter-btn is-active" type="button" data-activity-filter="all">all</button>
-          <button class="filter-btn" type="button" data-activity-filter="buys">cycle buys</button>
-          <button class="filter-btn" type="button" data-activity-filter="sells">trim sells</button>
+          <button class="filter-btn" type="button" data-activity-filter="buys">buys</button>
+          <button class="filter-btn" type="button" data-activity-filter="sells">sells</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -1091,12 +1138,12 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>BTC price</th>
+              <th>Price</th>
               <th>Zone</th>
-              <th>Phase</th>
-              <th>Hold buy</th>
+              <th>Cycle</th>
+              <th>Hold</th>
               <th>Trim</th>
-              <th>DCA buy</th>
+              <th>DCA</th>
             </tr>
           </thead>
           <tbody id="activityRows"></tbody>
@@ -1105,7 +1152,7 @@
     </section>
 
     <footer class="assumptions">
-      Fees apply to every buy and sell. Sell tax applies to realized profitable trims. Daily close data. Supply cost-basis percentiles, coins in loss, and 1-year ATH from Bitview.
+      Trading fees apply to every buy and sell. Trim tax applies only to realized profitable sells. Daily closes, cost-basis percentiles, coins in loss, and 1-year ATH data come from Bitview.
     </footer>
   </main>
 
@@ -1584,7 +1631,7 @@
         }));
       });
 
-      return summarize("Daily DCA", points, cash, btc, contributed, slice.at(-1).price, opts, {
+      return summarize("DCA", points, cash, btc, contributed, slice.at(-1).price, opts, {
         initialTrade,
         totalFeeUsd,
         totalTaxUsd,
@@ -1728,7 +1775,7 @@
       const { opts, result } = run;
       const items = strategyItems(result.series);
       renderLatestSignal(items, opts);
-      els.chartMeta.textContent = `${result.start} -> ${result.end} | trigger coins in loss top 1% | starting cash ${usd(opts.initialReserve)} | starting BTC buy ${usd(opts.initialInvested)} | savings ${usd(opts.monthlyTopup)}/mo | fee ${opts.tradeFeePct}% | sell tax ${opts.sellTaxPct}%`;
+      els.chartMeta.textContent = `${result.start} -> ${result.end} | cash ${usd(opts.initialReserve)} | start buy ${usd(opts.initialInvested)} | savings ${usd(opts.monthlyTopup)}/mo | fee ${opts.tradeFeePct}% | tax ${opts.sellTaxPct}%`;
       if (!draggingStart || !updateHistorySelection(els.historySvg, findDateIndex(rows, opts.start))) {
         renderHistoryChart(els.historySvg, opts);
       }
@@ -1745,10 +1792,10 @@
       const action = todayAction(primary, point);
       const phase = phaseLabel(point.cyclePhase);
       const dateLabel = point.date === opts.today ? `today | ${point.date}` : `latest | ${point.date}`;
-      els.signalDate.textContent = `latest signal | ${dateLabel}`;
+      els.signalDate.textContent = dateLabel;
       els.signalPhase.textContent = signalHeadline(action, phase);
       els.signalPhase.dataset.action = action;
-      els.signalContext.textContent = `${phase} phase | ${priceZoneLabel(point.priceZone)} | BTC drawdown ${pct(point.athDrawdown)}`;
+      els.signalContext.textContent = `${phase} | ${priceZoneLabel(point.priceZone)} | drawdown ${pct(point.athDrawdown)}`;
       els.signalPrice.textContent = usd(point.price);
       els.signalRows.innerHTML = items.map((item) => {
         const last = item.points.at(-1);
@@ -1808,14 +1855,12 @@
     }
 
     function renderDetailCharts(series) {
+      renderSeriesChart(els.btcSvg, series, { key: "btc", formatter: btcFmt });
       renderSeriesChart(els.cashSvg, series, { key: "cash", formatter: usd });
       renderSeriesChart(els.cashRunwaySvg, series, { key: "cashRunway", formatter: monthFmt });
-      renderSeriesChart(els.btcSvg, series, { key: "btc", formatter: btcFmt });
       renderSeriesChart(els.exposureSvg, series, { key: "exposure", formatter: pct });
       renderSeriesChart(els.buyFlowSvg, series, { key: "buyUsd", formatter: usd });
-      renderPriceZoneChart(els.priceZoneSvg, series);
-      renderSupplyInLossPercentileChart(els.supplyInLossPercentileSvg, series);
-      renderCyclePhaseChart(els.cyclePhaseSvg, series);
+      renderSeriesChart(els.averagePriceSvg, series, { key: "avgPrice", formatter: usd, priceReference: true, logScale: true });
       renderSeriesChart(els.sellFlowSvg, series, { key: "sellUsd", formatter: usd });
       renderSeriesChart(els.feesPaidSvg, series, { key: "totalFeeUsd", formatter: usd });
       renderSeriesChart(els.taxesPaidSvg, series, { key: "totalTaxUsd", formatter: usd });
@@ -1826,44 +1871,67 @@
       });
       renderSeriesChart(els.maxDrawdownSvg, series, { key: "maxDrawdown", formatter: pct });
       renderSeriesChart(els.underwaterStreakSvg, series, { key: "underwaterStreak", formatter: dayFmt });
-      renderSeriesChart(els.averagePriceSvg, series, { key: "avgPrice", formatter: usd, priceReference: true, logScale: true });
       renderSeriesChart(els.profitableDaysSvg, series, { key: "profitableDays", formatter: dayFmt });
       renderSeriesChart(els.unprofitableDaysSvg, series, { key: "unprofitableDays", formatter: dayFmt });
+      renderPriceZoneChart(els.priceZoneSvg, series);
+      renderSupplyInLossPercentileChart(els.supplyInLossPercentileSvg, series);
+      renderCyclePhaseChart(els.cyclePhaseSvg, series);
     }
 
     function renderMetrics(items, opts) {
-      const dca = items.find((item) => item.name === "Daily DCA");
+      const dca = items.find((item) => item.key === "dca");
       const ranked = [...items].sort((a, b) => b.finalValue - a.finalValue);
       const best = ranked[0];
-      const mostBtc = [...items].sort((a, b) => b.btc - a.btc)[0];
-      const leastDrawdown = [...items].sort((a, b) => a.maxDrawdown - b.maxDrawdown)[0];
+      const runnerUp = ranked[1];
+      const bestLast = best.points.at(-1);
       const today = items[0]?.points.at(-1)?.date ?? "today";
-      const dcaDelta = dca && best.key !== "dca"
-        ? `${signedUsd(best.finalValue - dca.finalValue)} vs Daily DCA (${signedPct(relativeDelta(best.finalValue, dca.finalValue))})`
-        : "Daily DCA wins this run";
+      const bestNetGain = best.finalValue - best.contributed;
+      const dcaValueDelta = dca ? best.finalValue - dca.finalValue : 0;
+      const dcaPctDelta = dca ? relativeDelta(best.finalValue, dca.finalValue) : 0;
+      const runnerUpDelta = runnerUp ? best.finalValue - runnerUp.finalValue : 0;
+      const totalCosts = best.totalFeeUsd + best.totalTaxUsd;
+      const dcaSummary = !dca
+        ? "-"
+        : best.key === "dca"
+          ? "baseline winner"
+          : `${signedUsd(dcaValueDelta)} (${signedPct(dcaPctDelta)})`;
+      const runnerUpSummary = runnerUp
+        ? `${signedUsd(runnerUpDelta)} vs ${escapeHtml(runnerUp.label)}`
+        : "-";
 
       els.metrics.innerHTML = `
         <div class="outcome-lead">
-          <div class="label">Best result</div>
-          <div class="outcome-lead-main" style="color:${best.color}">${escapeHtml(best.label)} -> ${usd(best.finalValue)}</div>
-          <div class="outcome-lead-detail">${signedUsd(best.finalValue - best.contributed)} net gain on ${usd(best.contributed)} deposited. ${dcaDelta}.</div>
+          <div class="outcome-summary">
+            <div>
+              <div class="label">Best result</div>
+              <div class="outcome-lead-main" style="color:${best.color}">${escapeHtml(winnerHeadline(best, runnerUp))}</div>
+              <div class="outcome-lead-detail">${usd(best.finalValue)} today, <span class="${toneClass(bestNetGain)}">${signedUsd(bestNetGain)}</span> net (${signedPct(best.returnPct)}) after ${usd(best.contributed)} deposited.</div>
+            </div>
+            <div class="outcome-today">
+              <span>Today</span>
+              <strong>${todayActionWithValue(best, bestLast)}</strong>
+            </div>
+          </div>
           <div class="outcome-reason">${escapeHtml(outcomeReason(best, dca, ranked[1]))}</div>
-          <div class="outcome-facts">
-            <span>most BTC <strong>${escapeHtml(mostBtc.label)} (${btcFmt(mostBtc.btc)})</strong></span>
-            <span>least drawdown <strong>${escapeHtml(leastDrawdown.label)} (${pct(leastDrawdown.maxDrawdown)})</strong></span>
-            <span>most cash held <strong>${escapeHtml([...items].sort((a, b) => b.averageCash - a.averageCash)[0].label)}</strong></span>
+          <div class="outcome-stats">
+            ${outcomeStat("vs DCA", dcaSummary, best.key === "dca" ? "neutral" : toneClass(dcaValueDelta))}
+            ${outcomeStat("vs next", runnerUpSummary, runnerUpDelta > 0 ? "positive" : "neutral")}
+            ${outcomeStat("BTC held", btcFmt(best.btc))}
+            ${outcomeStat("Cash left", usd(best.cash))}
+            ${outcomeStat("Max drawdown", pct(best.maxDrawdown), best.maxDrawdown > 0 ? "negative" : "neutral")}
+            ${outcomeStat("Fees + tax", usd(totalCosts))}
           </div>
         </div>
         <div class="outcome-table-wrap">
-          <div class="table-caption">Today (${today})</div>
+          <div class="table-caption">Latest (${today})</div>
           <table class="outcome-table today-table">
             <thead>
               <tr>
                 <th>Strategy</th>
-                <th>Doing now</th>
-                <th>Portfolio value</th>
-                <th>BTC stacked</th>
-                <th>Cash reserve</th>
+                <th>Action</th>
+                <th>Value</th>
+                <th>BTC</th>
+                <th>Cash</th>
               </tr>
             </thead>
             <tbody>
@@ -1888,15 +1956,15 @@
             <thead>
               <tr>
                 <th>Strategy</th>
-                <th>Portfolio</th>
-                <th>Net gain</th>
+                <th>Value</th>
+                <th>Net</th>
                 <th>Return</th>
-                <th>vs Daily DCA</th>
+                <th>vs DCA</th>
                 <th>Fees paid</th>
                 <th>Taxes paid</th>
-                <th>Worst drop</th>
-                <th>Longest below deposits</th>
-                <th>Profit days</th>
+                <th>Max drawdown</th>
+                <th>Below deposits</th>
+                <th>Days above</th>
               </tr>
             </thead>
             <tbody>
@@ -1924,17 +1992,17 @@
           </table>
         </div>
         <div class="outcome-table-wrap">
-          <div class="table-caption">Buying behavior, including the initial invested amount as the first buy</div>
+          <div class="table-caption">Buying behavior</div>
           <table class="outcome-table behavior-table">
             <thead>
               <tr>
                 <th>Strategy</th>
                 <th>Buy days</th>
-                <th>Cash deployed</th>
+                <th>Bought</th>
                 <th>Sold</th>
                 <th>Avg buy</th>
-                <th>Avg zone</th>
-                <th>Trigger buys</th>
+                <th>Avg buy zone</th>
+                <th>Extreme buys</th>
                 <th>Avg cash held</th>
               </tr>
             </thead>
@@ -2544,9 +2612,9 @@
 
     function strategyItems(series) {
       return [
-        { key: "simpleHold", label: "Cycle Hold", color: cssVar("--simple"), dash: "0", ...series.simpleHold },
-        { key: "simpleSell", label: "Cycle Trim", color: cssVar("--simple-sell"), dash: "0", ...series.simpleSell },
-        { key: "dca", label: "Daily DCA", color: cssVar("--dca"), dash: "0", ...series.dca },
+        { key: "simpleHold", label: "Hold", color: cssVar("--simple"), dash: "0", ...series.simpleHold },
+        { key: "simpleSell", label: "Trim", color: cssVar("--simple-sell"), dash: "0", ...series.simpleSell },
+        { key: "dca", label: "DCA", color: cssVar("--dca"), dash: "0", ...series.dca },
       ];
     }
 
@@ -2972,7 +3040,7 @@
     function phaseLabel(value) {
       if (value === 3) return "trim";
       if (value === 2) return "hold";
-      if (value === 1) return "DCA";
+      if (value === 1) return "buy";
       return "wait";
     }
 
@@ -3042,8 +3110,8 @@
     }
 
     function simpleStrategyName(sellRule) {
-      if (sellRule === "value") return "Cycle Trim";
-      return "Cycle Hold";
+      if (sellRule === "value") return "Trim";
+      return "Hold";
     }
 
     function normalDcaBuyAmount(cash, monthlyTopup) {
@@ -3142,49 +3210,67 @@
       return `${value.toFixed(0)}%`;
     }
 
+    function winnerHeadline(best, runnerUp) {
+      if (runnerUp && Math.abs(best.finalValue - runnerUp.finalValue) < 1e-9) {
+        return `${best.label} ties`;
+      }
+      return `${best.label} wins`;
+    }
+
+    function outcomeStat(label, value, valueClass = "") {
+      return `
+        <div class="outcome-stat">
+          <span>${escapeHtml(label)}</span>
+          <strong class="${escapeHtml(valueClass)}">${value}</strong>
+        </div>
+      `;
+    }
+
     function outcomeReason(best, dca, runnerUp) {
       if (!dca || !runnerUp) return "The best strategy ended with the highest portfolio value for this start date.";
       if (Math.abs(best.finalValue - runnerUp.finalValue) < 1e-9) {
-        return "Top strategies are tied on final value; compare BTC stacked, cash left, and drawdown to choose the better fit.";
+        return "Top strategies are tied on final value; compare BTC held, cash left, and drawdown to choose the better fit.";
       }
+      const dcaValueDelta = best.finalValue - dca.finalValue;
+      const btcDelta = best.btc - dca.btc;
+      const cashDelta = best.cash - dca.cash;
       if (best.key === "dca") {
-        return best.btc >= runnerUp.btc
-          ? "Daily DCA won by staying exposed instead of waiting for a cycle trigger."
-          : "Daily DCA won because steady buying beat the cash timing rules for this start date.";
+        return `DCA won because constant exposure beat waiting for a cycle trigger from this start date; it finished ${signedUsd(best.finalValue - runnerUp.finalValue)} ahead of ${runnerUp.label}.`;
       }
-      if (best.btc > dca.btc && best.cash > dca.cash) {
-        return `${best.label} won by ending with more BTC and more dry powder than Daily DCA.`;
+      if (best.key === "simpleSell") {
+        const cashClause = cashDelta > 0 ? ` with ${usd(cashDelta)} more cash` : "";
+        return `Trim won by buying pain and trimming heat; it finished ${signedUsd(dcaValueDelta)} ahead of DCA after fees and tax${cashClause}.`;
       }
-      if (best.btc > dca.btc) {
-        return `${best.label} won by stacking more BTC; its buys landed in better zones than the steady baseline.`;
+      if (btcDelta > 0 && cashDelta > 0) {
+        return `Hold won by waiting for rare pain zones, ending ${signedBtc(btcDelta)} ahead of DCA and keeping ${usd(cashDelta)} more cash.`;
       }
-      if (best.cash > dca.cash) {
-        return `${best.label} won by keeping more dry powder into today while still holding enough BTC exposure.`;
+      if (btcDelta > 0) {
+        return `Hold won by concentrating buys in better zones, ending ${signedBtc(btcDelta)} ahead of DCA.`;
       }
-      if (best.totalSellUsd > 0) {
-        return `${best.label} won because trimming rebuilt cash without giving up too much upside.`;
+      if (cashDelta > 0) {
+        return `Hold won by preserving ${signedUsd(cashDelta)} more cash than DCA while keeping enough BTC exposure.`;
       }
-      return `${best.label} won because its cash and BTC mix ended with a higher value than the baseline.`;
+      return `${best.label} won because its cash and BTC mix ended with a higher value than DCA for this start date.`;
     }
 
     function todayAction(item, point) {
       if (!point) return "-";
       if (point.sellUsd > 0) return "sell";
       if (point.buyUsd > 0) return "buy";
-      return "hodl";
+      return "wait";
     }
 
     function signalHeadline(action, phase) {
       if (action === "buy") return "buy";
       if (action === "sell") return "trim";
-      if (phase === "DCA") return "buy phase";
+      if (phase === "buy") return "buy phase";
       if (phase === "trim") return "trim";
       return phase;
     }
 
     function todayActionText(item, point) {
       const action = todayAction(item, point);
-      if (!point || action === "hodl") return action;
+      if (!point || action === "wait") return action;
       const amount = action === "sell" ? point.sellUsd : point.buyUsd;
       return `${action} ${usd(amount)}`;
     }
@@ -3192,7 +3278,7 @@
     function todayActionWithValue(item, point) {
       const action = todayAction(item, point);
       const actionClass = `action-${action}`;
-      if (!point || action === "hodl") return `<span class="${actionClass}">${escapeHtml(action)}</span>`;
+      if (!point || action === "wait") return `<span class="${actionClass}">${escapeHtml(action)}</span>`;
       const amount = action === "sell" ? point.sellUsd : point.buyUsd;
       return `<span class="${actionClass}">${escapeHtml(action)}</span> <span class="neutral">${usd(amount)}</span>`;
     }
@@ -3200,8 +3286,8 @@
     function activityMetaText(filter, total) {
       const noun = total === 1 ? "day" : "days";
       const count = fmt(total);
-      if (filter === "buys") return `${count} cycle buy ${noun}, newest first`;
-      if (filter === "sells") return `${count} trim sell ${noun}, newest first`;
+      if (filter === "buys") return `${count} buy ${noun}, newest first`;
+      if (filter === "sells") return `${count} sell ${noun}, newest first`;
       return `${count} ${noun}, newest first`;
     }
 
@@ -3240,9 +3326,10 @@
     }
 
     function rankFmt(value, maxRank = 4) {
-      if (value === maxRank) return `${maxRank} top`;
-      if (value === 1) return "1 low";
-      return String(value);
+      if (!Number.isFinite(value)) return "-";
+      if (value === maxRank) return "top";
+      if (value === 1) return "low";
+      return `${maxRank - value + 1}/${maxRank}`;
     }
 
     function signedPct(value) {
@@ -3264,6 +3351,13 @@
       if (!Number.isFinite(value)) return "-";
       const digits = Math.abs(value) < 1 ? 5 : 3;
       return `${Number(value).toLocaleString("en-US", { maximumFractionDigits: digits })} BTC`;
+    }
+
+    function signedBtc(value) {
+      if (!Number.isFinite(value)) return "-";
+      if (value > 0) return `+${btcFmt(value)}`;
+      if (value < 0) return `-${btcFmt(Math.abs(value))}`;
+      return btcFmt(0);
     }
 
     function monthFmt(value) {
