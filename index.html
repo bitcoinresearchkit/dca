@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bitcoin DCA Cycle Simulator</title>
+  <title>Bitview Optimized DCA</title>
   <style>
     :root {
       color-scheme: dark;
@@ -309,18 +309,25 @@
 
     .grid-heading {
       grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, auto) minmax(18rem, 1fr);
+      align-items: end;
+      gap: 0.75rem 1.5rem;
       color: var(--muted);
-      padding-top: 1.25rem;
-      margin-top: 8px;
+      padding-top: 1rem;
+      margin-top: 0.75rem;
       border-top: 1px solid var(--line);
-      line-height: 1.45;
     }
 
     .grid-heading .title {
       font-family: var(--serif);
       font-size: 2rem;
       line-height: 1;
-      margin-bottom: 4px;
+    }
+
+    .grid-heading .title + div {
+      max-width: 42rem;
+      line-height: 1.35;
     }
 
     .app > section + section { margin-top: var(--section-gap); }
@@ -332,19 +339,30 @@
     }
 
     .panel-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 0 0 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 0.75rem 1rem;
+      padding: 0 0 0.65rem;
       color: var(--muted);
-      line-height: 1.35;
+      line-height: 1.25;
+    }
+
+    .panel-head > div {
+      min-width: 0;
     }
 
     .title {
       color: var(--text);
       line-height: 1;
       text-transform: uppercase;
+    }
+
+    .panel-head .title + div {
+      max-width: 38rem;
+      margin-top: 0.3rem;
+      font-size: 0.75rem;
+      line-height: 1.25;
     }
 
     .chart-wrap,
@@ -359,7 +377,7 @@
     .small-chart-wrap {
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
-      gap: 0.35rem;
+      gap: 0.2rem;
     }
 
     .history-wrap {
@@ -444,7 +462,7 @@
       display: flex;
       gap: 0.625rem;
       margin: 0;
-      padding: 0.25rem 0 0.35rem;
+      padding: 0.15rem 0 0.25rem;
       overflow-x: auto;
       list-style: none;
     }
@@ -713,6 +731,7 @@
       h1 { font-size: 3.25rem; }
       .controls { grid-template-columns: repeat(2, 1fr); }
       .detail-grid { grid-template-columns: 1fr; }
+      .grid-heading { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: 1fr; }
       .activity-filter { justify-content: flex-start; }
     }
@@ -725,6 +744,7 @@
         --grid-gap: 0.75rem;
       }
       h1 { font-size: 2.75rem; }
+      .panel-head { grid-template-columns: 1fr; }
       .signal-main { grid-template-columns: 1fr; }
       .signal-price { justify-items: start; text-align: left; }
       .signal-phase { font-size: 3rem; }
@@ -746,7 +766,7 @@
     <header class="topbar">
       <div class="intro-copy">
         <div class="brand"><span class="brand-badge">brk</span><span>dca</span></div>
-        <h1>Bitcoin DCA Cycle Simulator</h1>
+        <h1>Bitview Optimized DCA</h1>
         <div class="sub">Pick a start date and savings plan, then compare daily DCA with cycle-aware buying and trimming.</div>
         <p class="cycle-rule">Cycle strategies wait with cash, then buy when coins in loss reaches a top 1% raw historical extreme.
           They stop new buys when BTC reaches a fresh all-time high (ATH).
@@ -788,7 +808,7 @@
         <input id="tradeFee" type="number" min="0" step="0.01" value="1">
       </label>
       <label>Sell tax %
-        <input id="sellTax" type="number" min="0" step="0.1" value="30">
+        <input id="sellTax" type="number" min="0" step="0.1" value="0">
       </label>
     </section>
 
@@ -843,7 +863,7 @@
         <div class="panel-head">
           <div>
             <div class="title">BTC stacked</div>
-          <div>stack size over time</div>
+            <div>stack size over time</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -1021,7 +1041,7 @@
         <div class="panel-head">
           <div>
             <div class="title">Cycle state</div>
-            <div>idle, buying, holding, or trimming</div>
+            <div>waiting, buying, holding, or trimming</div>
           </div>
         </div>
         <div class="small-chart-wrap">
@@ -1075,8 +1095,7 @@
               <th>Zone</th>
               <th>Phase</th>
               <th>Hold buy</th>
-              <th>Trim buy</th>
-              <th>Trim sell</th>
+              <th>Trim</th>
               <th>DCA buy</th>
             </tr>
           </thead>
@@ -1111,7 +1130,6 @@
     const CYCLE_BUY_FLOOR_FRACTION = 0.0065;
     const TRIM_SELL_FRACTION = 0.0065;
     const DCA_HISTOGRAM_ALPHA = 0.75;
-    const DCA_HISTOGRAM_DIM_ALPHA = 0.18;
     const DCA_IN_MIN_MULTIPLIER = 1;
     const DCA_MULTIPLIER_STEP = 0.5;
     const DCA_LOSS_SHARE_STEP = 5;
@@ -1128,6 +1146,9 @@
     const CHART_MARKER_WIDTH = 84;
     const CHART_MARKER_HEIGHT = 20;
     const CHART_MARKER_EDGE_OVERFLOW = 8;
+    const CHART_PLOT_TOP_GAP = 8;
+    const CHART_DOT_RADIUS = 3.5;
+    const CHART_DOT_ACTIVE_RADIUS = 4.5;
     const CLEAN_CHART_PAD = { top: 20, right: 0, bottom: 10, left: 0 };
     const HISTORY_PAD = { top: 42, right: 0, bottom: 0, left: 0 };
     const HISTORY_PRICE_STROKE = 1.75;
@@ -1956,14 +1977,13 @@
             <td>${priceZoneLabel(day.priceZone)}</td>
             <td>${phaseLabel(day.cyclePhase)}</td>
             <td style="color: var(--simple)">${actionUsd(hold[i].buyUsd)}</td>
-            <td style="color: var(--simple-sell)">${actionUsd(trim[i].buyUsd)}</td>
-            <td style="color: var(--simple-sell)">${actionUsd(trim[i].sellUsd)}</td>
+            <td style="color: var(--simple-sell)">${trimActionText(trim[i])}</td>
             <td style="color: var(--dca)">${actionUsd(dca[i].buyUsd)}</td>
           </tr>
         `;
       }
       if (!html) {
-        html = `<tr><td colspan="8" class="neutral">no days for this filter</td></tr>`;
+        html = `<tr><td colspan="7" class="neutral">no days for this filter</td></tr>`;
       }
       els.activityMeta.textContent = activityMetaText(activityFilter, total);
       els.activityRows.innerHTML = html;
@@ -2024,10 +2044,7 @@
         const barHeight = Math.max(1, Math.abs(zeroY - valueY));
         return `<rect x="${x(point.date) - barWidth / 2}" y="${yTop}" width="${barWidth}" height="${barHeight}" fill="${point.color}" opacity="${DCA_HISTOGRAM_ALPHA}"/>`;
       }).join("");
-      const dcaDimOpacity = clamp(1 - DCA_HISTOGRAM_DIM_ALPHA / DCA_HISTOGRAM_ALPHA, 0, 1);
       const dcaDimWidth = clamp(startX - pad.left, 0, width - pad.left - pad.right);
-      const priceBeforeWidth = clamp(startX, 0, width);
-      const priceAfterWidth = Math.max(0, width - startX);
       const dateLabel = startRow.date;
       const priceLabel = usd(startRow.price);
       const labelWidth = 96;
@@ -2037,18 +2054,9 @@
 
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.innerHTML = `
-        <defs>
-          <clipPath id="historyBeforeClip" clipPathUnits="userSpaceOnUse">
-            <rect id="historyBeforeClipRect" x="0" y="0" width="${priceBeforeWidth}" height="${height}"/>
-          </clipPath>
-          <clipPath id="historyAfterClip" clipPathUnits="userSpaceOnUse">
-            <rect id="historyAfterClipRect" x="${startX}" y="0" width="${priceAfterWidth}" height="${height}"/>
-          </clipPath>
-        </defs>
         <g id="historyDcaBars">${dcaBars}</g>
-        <rect id="historyDcaDimmer" x="${pad.left}" y="${actionTop}" width="${dcaDimWidth}" height="${actionBottom - actionTop}" fill="${cssVar("--bg")}" opacity="${dcaDimOpacity}" pointer-events="none"/>
-        <path id="historyPriceBase" d="${fullPath}" fill="none" stroke="${cssVar("--faint")}" stroke-width="${HISTORY_PRICE_STROKE}" vector-effect="non-scaling-stroke" clip-path="url(#historyBeforeClip)"/>
-        <path id="historyPriceAfter" d="${fullPath}" fill="none" stroke="${cssVar("--text")}" stroke-width="${HISTORY_PRICE_STROKE}" vector-effect="non-scaling-stroke" clip-path="url(#historyAfterClip)"/>
+        <path id="historyPrice" d="${fullPath}" fill="none" stroke="${cssVar("--text")}" stroke-width="${HISTORY_PRICE_STROKE}" vector-effect="non-scaling-stroke"/>
+        <rect id="historyDcaDimmer" x="${pad.left}" y="0" width="${dcaDimWidth}" height="${height}" fill="${cssVar("--bg")}" opacity="${CHART_SHADE_OPACITY}" pointer-events="none"/>
         <line id="historySelectionLine" x1="${startX}" x2="${startX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
         <rect id="historySelectionHit" x="${startX - 5}" y="${pad.top}" width="10" height="${height - pad.top - pad.bottom}" fill="transparent"/>
         <foreignObject id="historyLabel" x="${labelX - labelWidth / 2}" y="${labelY}" width="${labelWidth}" height="${labelHeight}">
@@ -2099,13 +2107,6 @@
       if (dateLabel) dateLabel.textContent = row.date;
       if (priceLabel) priceLabel.textContent = usd(row.price);
 
-      const beforeClip = svg.querySelector("#historyBeforeClipRect");
-      if (beforeClip) beforeClip.setAttribute("width", clamp(startX, 0, width));
-      const afterClip = svg.querySelector("#historyAfterClipRect");
-      if (afterClip) {
-        afterClip.setAttribute("x", startX);
-        afterClip.setAttribute("width", Math.max(0, width - startX));
-      }
       const dimmer = svg.querySelector("#historyDcaDimmer");
       if (dimmer) dimmer.setAttribute("width", clamp(startX - pad.left, 0, width - pad.left - pad.right));
       return true;
@@ -2129,7 +2130,7 @@
         }
 
         let value = 0;
-        let phase = "idle";
+        let phase = "wait";
         const percentile = dcaCostBasisPercentile(row.lossShare);
         if (buyActive) {
           value = dcaInMultiplier(row.lossShare);
@@ -2213,11 +2214,11 @@
     }
 
     function renderEquityChart(svg, series) {
-      ensureChartLegend(svg);
       const baseLines = strategyItems(series);
       const valueLines = [
         ...baseLines.map((line) => ({ ...line, valueKey: "value" })),
         {
+          key: "contributed",
           label: "Contributed",
           labelPrefix: "Contrib",
           color: cssVar("--reserve"),
@@ -2226,7 +2227,7 @@
           valueKey: "contributed",
         },
       ];
-      const rankLines = rankedStrategyLines(baseLines);
+      const rankLines = rankedStrategyLines(valueLines);
       const points = baseLines[0]?.points ?? [];
       if (!points.length) return;
       const chartValues = valueLines.flatMap((line) => line.points.map((p) => p[line.valueKey])).filter(Number.isFinite);
@@ -2236,62 +2237,54 @@
       const maxRank = rankLines.length;
       const lastIndex = points.length - 1;
       const last = points[lastIndex];
-      const valueRows = chartLegendRows(valueLines, lastIndex, usd, {
-        labelFor: (line) => line.labelPrefix || line.label,
-      }).map((row) => ({ ...row, key: `value-${row.key}` }));
-      const rankRows = chartLegendRows(rankLines, lastIndex, (value) => rankFmt(value, maxRank), {
-        labelFor: (line) => line.label,
-        valueFor: (_line, point) => rankFmt(point.rank, maxRank),
-      }).map((row) => ({ ...row, index: row.index + valueRows.length, key: `rank-${row.key}` }));
-      const legendRows = [...valueRows, ...rankRows];
+      const equityLegendRows = (index) => valueLines.map((line, lineIndex) => {
+        const valuePoint = line.points[index];
+        const rankPoint = rankLines[lineIndex].points[index];
+        return {
+          index: lineIndex,
+          key: chartLineKey(line, lineIndex),
+          color: line.color,
+          label: line.labelPrefix || line.label,
+          value: `${usd(valuePoint[line.valueKey])} | ${rankFmt(rankPoint.rank, maxRank)}`,
+        };
+      });
+      const legendRows = equityLegendRows(lastIndex);
       updateChartLegend(svg, legendRows);
       const { width, height, pad } = chartFrame(svg, { pad: CLEAN_CHART_PAD });
+      const plotTop = chartPlotTop(pad);
       const x = scaleTime(points[0].date, points.at(-1).date, pad.left, width - pad.right);
-      const rankTop = Math.max(pad.top + 120, Math.round(height * 0.82));
+      const rankTop = Math.max(plotTop + 120, Math.round(height * 0.82));
       const valueBottom = rankTop - 8;
       const rankBottom = height - pad.bottom;
-      const valueY = scaleLog(minPositiveValue * 0.95, maxValue * 1.04, valueBottom, pad.top);
+      const valueY = scaleLog(minPositiveValue * 0.95, maxValue, valueBottom, plotTop);
       const rankY = scaleLinear(1, maxRank, rankBottom, rankTop);
       const lastX = x(last.date);
 
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.innerHTML = `
-        ${chartLinePaths(valueLines, x, valueY, { minValue: minPositiveValue, lineKeyPrefix: "value-" })}
-        ${chartLinePaths(rankLines, x, rankY, { key: "rank", pathFn: stepPathD, strokeWidth: 1.25, lineKeyPrefix: "rank-" })}
-        <rect x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}" fill="transparent"/>
-        ${chartShade(width, height)}
-        <line id="hoverLine" x1="${lastX}" x2="${lastX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" opacity="0" vector-effect="non-scaling-stroke"/>
-        ${renderChartMarker(chartMarkerData(last, lastX, width))}
+        ${chartLinePaths(valueLines, x, valueY, { minValue: minPositiveValue })}
+        ${chartLinePaths(rankLines, x, rankY, { key: "rank", pathFn: stepPathD, strokeWidth: 1.25 })}
+        ${chartChrome(width, height, pad, last, lastX)}
       `;
 
-      svg.onmousemove = (event) => {
-        const hover = hoverAt(event, svg, points, pad, width, height);
-        if (!hover) return;
-        const xValue = x(hover.point.date);
-        const hoverValueRows = chartLegendRows(valueLines, hover.index, usd, {
-          labelFor: (line) => line.labelPrefix || line.label,
-        }).map((row) => ({ ...row, key: `value-${row.key}` }));
-        const hoverRankRows = chartLegendRows(rankLines, hover.index, (value) => rankFmt(value, maxRank), {
-          labelFor: (line) => line.label,
-          valueFor: (_line, point) => rankFmt(point.rank, maxRank),
-        }).map((row) => ({ ...row, index: row.index + hoverValueRows.length, key: `rank-${row.key}` }));
-        setChartBeforeWidth(svg, xValue);
-        showHoverLine(svg, xValue);
-        updateChartMarker(svg, chartMarkerData(hover.point, xValue, width));
-        updateChartLegend(svg, [...hoverValueRows, ...hoverRankRows]);
-        els.tooltip.classList.remove("on");
-      };
-      svg.onmouseleave = () => {
-        setChartBeforeWidth(svg, width);
-        hideHoverLine(svg);
-        updateChartMarker(svg, chartMarkerData(last, lastX, width));
-        updateChartLegend(svg, legendRows);
-        els.tooltip.classList.remove("on");
-      };
+      bindChartHover(svg, {
+        points,
+        pad,
+        width,
+        height,
+        x,
+        last,
+        lastX,
+        legendRows,
+        legendRowsAt: ({ index }) => equityLegendRows(index),
+        markers: [
+          ...chartMarkerSeries(valueLines, valueY, { minValue: minPositiveValue }),
+          ...chartMarkerSeries(rankLines, rankY, { key: "rank" }),
+        ],
+      });
     }
 
     function renderSeriesChart(svg, series, config) {
-      ensureChartLegend(svg);
       const lines = strategyItems(series);
       const chartLines = lines.map((line) => ({ ...line, valueKey: config.key }));
       if (config.priceReference) {
@@ -2322,50 +2315,41 @@
       const minPositiveValue = positiveValues.length ? Math.min(...positiveValues) : 1;
       const lastIndex = chartLines[0].points.length - 1;
       const last = chartLines[0].points[lastIndex];
-      const legendRows = chartLegendRows(chartLines, lastIndex, config.formatter, {
+      const seriesLegendRows = (index) => chartLegendRows(chartLines, index, config.formatter, {
         labelFor: (line) => line.labelPrefix || line.label,
       });
+      const legendRows = seriesLegendRows(lastIndex);
       updateChartLegend(svg, legendRows);
       const { width, height, pad } = chartFrame(svg, { pad: CLEAN_CHART_PAD });
+      const plotTop = chartPlotTop(pad);
       const x = scaleTime(all[0].date, all.at(-1).date, pad.left, width - pad.right);
       const y = logScale
-        ? scaleLog(minPositiveValue * 0.95, Math.max(minPositiveValue * 1.05, maxValue * 1.04), height - pad.bottom, pad.top)
-        : scaleLinear(0, maxValue > 0 ? maxValue * 1.04 : 1, height - pad.bottom, pad.top);
+        ? scaleLog(minPositiveValue * 0.95, Math.max(minPositiveValue * 1.05, maxValue), height - pad.bottom, plotTop)
+        : scaleLinear(0, maxValue > 0 ? maxValue : 1, height - pad.bottom, plotTop);
       const minValue = logScale ? minPositiveValue : null;
       const lastX = x(last.date);
 
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.innerHTML = `
         ${chartLinePaths(chartLines, x, y, { minValue })}
-        <rect x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}" fill="transparent" data-hit="chart"/>
-        ${chartShade(width, height)}
-        <line id="hoverLine" x1="${lastX}" x2="${lastX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" opacity="0" vector-effect="non-scaling-stroke"/>
-        ${renderChartMarker(chartMarkerData(last, lastX, width))}
+        ${chartChrome(width, height, pad, last, lastX)}
       `;
 
-      svg.onmousemove = (event) => {
-        const hover = hoverAt(event, svg, chartLines[0].points, pad, width, height);
-        if (!hover) return;
-        const xValue = x(hover.point.date);
-        setChartBeforeWidth(svg, xValue);
-        showHoverLine(svg, xValue);
-        updateChartMarker(svg, chartMarkerData(hover.point, xValue, width));
-        updateChartLegend(svg, chartLegendRows(chartLines, hover.index, config.formatter, {
-          labelFor: (line) => line.labelPrefix || line.label,
-        }));
-        els.tooltip.classList.remove("on");
-      };
-      svg.onmouseleave = () => {
-        setChartBeforeWidth(svg, width);
-        hideHoverLine(svg);
-        updateChartMarker(svg, chartMarkerData(last, lastX, width));
-        updateChartLegend(svg, legendRows);
-        els.tooltip.classList.remove("on");
-      };
+      bindChartHover(svg, {
+        points: chartLines[0].points,
+        pad,
+        width,
+        height,
+        x,
+        last,
+        lastX,
+        legendRows,
+        legendRowsAt: ({ index }) => seriesLegendRows(index),
+        markers: chartMarkerSeries(chartLines, y, { minValue }),
+      });
     }
 
     function renderPriceZoneChart(svg, series) {
-      ensureChartLegend(svg);
       const points = marketPoints(series);
       const last = points.at(-1);
       const zoneRows = (point) => [{
@@ -2377,41 +2361,39 @@
       }];
       updateChartLegend(svg, zoneRows(last));
       const { width, height, pad } = chartFrame(svg, { pad: CLEAN_CHART_PAD });
+      const plotTop = chartPlotTop(pad);
       const x = scaleTime(points[0].date, points.at(-1).date, pad.left, width - pad.right);
-      const y = scaleLinear(40, 102, height - pad.bottom, pad.top);
+      const y = scaleLinear(40, 101, height - pad.bottom, plotTop);
       const paths = priceZoneColoredPaths(points, x, y);
       const lastX = x(last.date);
 
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.innerHTML = `
         <g data-chart-line="zone" data-chart-layer="line">${paths}</g>
-        <rect x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}" fill="transparent"/>
-        ${chartShade(width, height)}
-        <line id="hoverLine" x1="${lastX}" x2="${lastX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" opacity="0" vector-effect="non-scaling-stroke"/>
-        ${renderChartMarker(chartMarkerData(last, lastX, width))}
+        ${chartChrome(width, height, pad, last, lastX)}
       `;
 
-      svg.onmousemove = (event) => {
-        const hover = hoverAt(event, svg, points, pad, width, height);
-        if (!hover) return;
-        const xValue = x(hover.point.date);
-        setChartBeforeWidth(svg, xValue);
-        showHoverLine(svg, xValue);
-        updateChartMarker(svg, chartMarkerData(hover.point, xValue, width));
-        updateChartLegend(svg, zoneRows(hover.point));
-        els.tooltip.classList.remove("on");
-      };
-      svg.onmouseleave = () => {
-        setChartBeforeWidth(svg, width);
-        hideHoverLine(svg);
-        updateChartMarker(svg, chartMarkerData(last, lastX, width));
-        updateChartLegend(svg, zoneRows(last));
-        els.tooltip.classList.remove("on");
-      };
+      bindChartHover(svg, {
+        points,
+        pad,
+        width,
+        height,
+        x,
+        last,
+        lastX,
+        legendRows: zoneRows(last),
+        legendRowsAt: ({ point }) => zoneRows(point),
+        markers: [{
+          key: "zone",
+          points,
+          valueKey: "priceZone",
+          y,
+          colorFor: (point) => priceZoneColor(point.priceZone),
+        }],
+      });
     }
 
     function renderSupplyInLossPercentileChart(svg, series) {
-      ensureChartLegend(svg);
       const points = marketPoints(series);
       const last = points.at(-1);
       const supplyRows = (point) => [{
@@ -2423,8 +2405,9 @@
       }];
       updateChartLegend(svg, supplyRows(last));
       const { width, height, pad } = chartFrame(svg, { pad: CLEAN_CHART_PAD });
+      const plotTop = chartPlotTop(pad);
       const x = scaleTime(points[0].date, points.at(-1).date, pad.left, width - pad.right);
-      const y = scaleLinear(0, 100, height - pad.bottom, pad.top);
+      const y = scaleLinear(0, 100, height - pad.bottom, plotTop);
       const path = pathD(points, x, y, "supplyInLossPercentile");
       const lastX = x(last.date);
       const triggerY = y(99);
@@ -2447,33 +2430,30 @@
         </defs>
         <line x1="${pad.left}" x2="${width - pad.right}" y1="${triggerY}" y2="${triggerY}" stroke="${cssVar("--accent")}" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>
         <g data-chart-line="loss-percentile" data-chart-layer="line">${splitPaths}</g>
-        <rect x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}" fill="transparent"/>
-        ${chartShade(width, height)}
-        <line id="hoverLine" x1="${lastX}" x2="${lastX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" opacity="0" vector-effect="non-scaling-stroke"/>
-        ${renderChartMarker(chartMarkerData(last, lastX, width))}
+        ${chartChrome(width, height, pad, last, lastX)}
       `;
 
-      svg.onmousemove = (event) => {
-        const hover = hoverAt(event, svg, points, pad, width, height);
-        if (!hover) return;
-        const xValue = x(hover.point.date);
-        setChartBeforeWidth(svg, xValue);
-        showHoverLine(svg, xValue);
-        updateChartMarker(svg, chartMarkerData(hover.point, xValue, width));
-        updateChartLegend(svg, supplyRows(hover.point));
-        els.tooltip.classList.remove("on");
-      };
-      svg.onmouseleave = () => {
-        setChartBeforeWidth(svg, width);
-        hideHoverLine(svg);
-        updateChartMarker(svg, chartMarkerData(last, lastX, width));
-        updateChartLegend(svg, supplyRows(last));
-        els.tooltip.classList.remove("on");
-      };
+      bindChartHover(svg, {
+        points,
+        pad,
+        width,
+        height,
+        x,
+        last,
+        lastX,
+        legendRows: supplyRows(last),
+        legendRowsAt: ({ point }) => supplyRows(point),
+        markers: [{
+          key: "loss-percentile",
+          points,
+          valueKey: "supplyInLossPercentile",
+          y,
+          colorFor: (point) => point.supplyInLossPercentile > 99 ? cssVar("--accent") : cssVar("--text"),
+        }],
+      });
     }
 
     function renderCyclePhaseChart(svg, series) {
-      ensureChartLegend(svg);
       const points = marketPoints(series);
       const line = { label: "Phase", legendKey: "phase", color: cssVar("--text"), dash: "0", points, valueKey: "cyclePhase" };
       const last = points.at(-1);
@@ -2486,43 +2466,42 @@
       }];
       updateChartLegend(svg, phaseRows(last));
       const { width, height, pad } = chartFrame(svg, { pad: CLEAN_CHART_PAD });
+      const plotTop = chartPlotTop(pad);
       const x = scaleTime(points[0].date, points.at(-1).date, pad.left, width - pad.right);
-      const y = scaleLinear(0, 3, height - pad.bottom, pad.top);
+      const y = scaleLinear(0, 3, height - pad.bottom, plotTop);
       const lastX = x(last.date);
 
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.innerHTML = `
         ${chartLinePaths([line], x, y, { key: "cyclePhase", pathFn: stepPathD })}
-        <rect x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}" fill="transparent"/>
-        ${chartShade(width, height)}
-        <line id="hoverLine" x1="${lastX}" x2="${lastX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" opacity="0" vector-effect="non-scaling-stroke"/>
-        ${renderChartMarker(chartMarkerData(last, lastX, width))}
+        ${chartChrome(width, height, pad, last, lastX)}
       `;
 
-      svg.onmousemove = (event) => {
-        const hover = hoverAt(event, svg, points, pad, width, height);
-        if (!hover) return;
-        const xValue = x(hover.point.date);
-        setChartBeforeWidth(svg, xValue);
-        showHoverLine(svg, xValue);
-        updateChartMarker(svg, chartMarkerData(hover.point, xValue, width));
-        updateChartLegend(svg, phaseRows(hover.point));
-        els.tooltip.classList.remove("on");
-      };
-      svg.onmouseleave = () => {
-        setChartBeforeWidth(svg, width);
-        hideHoverLine(svg);
-        updateChartMarker(svg, chartMarkerData(last, lastX, width));
-        updateChartLegend(svg, phaseRows(last));
-        els.tooltip.classList.remove("on");
-      };
+      bindChartHover(svg, {
+        points,
+        pad,
+        width,
+        height,
+        x,
+        last,
+        lastX,
+        legendRows: phaseRows(last),
+        legendRowsAt: ({ point }) => phaseRows(point),
+        markers: [{
+          key: "phase",
+          points,
+          valueKey: "cyclePhase",
+          y,
+          colorFor: (point) => cyclePhaseColor(point.cyclePhase),
+        }],
+      });
     }
 
     function hoverAt(event, svg, points, pad, width, height) {
       const pt = svgPoint(svg, event);
       if (pt.x < pad.left || pt.x > width - pad.right || pt.y < pad.top || pt.y > height - pad.bottom) return;
       const index = clamp(Math.round((pt.x - pad.left) / (width - pad.left - pad.right) * (points.length - 1)), 0, points.length - 1);
-      return { index, point: points[index] };
+      return { index, point: points[index], y: pt.y };
     }
 
     function showHoverLine(svg, xValue) {
@@ -2538,6 +2517,31 @@
       svg.classList.remove("is-chart-hovering");
     }
 
+    function bindChartHover(svg, config) {
+      const { points, pad, width, height, x, last, lastX, legendRows, legendRowsAt, markers = [] } = config;
+      svg.onmousemove = (event) => {
+        const hover = hoverAt(event, svg, points, pad, width, height);
+        if (!hover) return;
+        const xValue = x(hover.point.date);
+        const previewKey = updateChartHoverMarkers(svg, markers, hover.index, xValue, hover.y);
+        setChartShadeStart(svg, xValue);
+        showHoverLine(svg, xValue);
+        updateChartMarker(svg, chartMarkerData(hover.point, xValue, width));
+        updateChartLegend(svg, legendRowsAt(hover));
+        setChartLegendPreview(svg, previewKey, { muted: false });
+        els.tooltip.classList.remove("on");
+      };
+      svg.onmouseleave = () => {
+        setChartShadeStart(svg, width);
+        hideChartHoverMarkers(svg);
+        setChartLegendPreview(svg, null, { muted: false });
+        hideHoverLine(svg);
+        updateChartMarker(svg, chartMarkerData(last, lastX, width));
+        updateChartLegend(svg, legendRows);
+        els.tooltip.classList.remove("on");
+      };
+    }
+
     function strategyItems(series) {
       return [
         { key: "simpleHold", label: "Cycle Hold", color: cssVar("--simple"), dash: "0", ...series.simpleHold },
@@ -2547,15 +2551,21 @@
     }
 
     function rankedStrategyLines(lines) {
-      return lines.map((line) => ({
-        ...line,
-        valueKey: "rank",
-        points: line.points.map((point, pointIndex) => {
-          const value = point.value;
-          const betterCount = lines.filter((candidate) => candidate.points[pointIndex].value > value).length;
-          return { ...point, rank: lines.length - betterCount };
-        }),
-      }));
+      return lines.map((line) => {
+        const valueKey = line.valueKey || "value";
+        return {
+          ...line,
+          valueKey: "rank",
+          points: line.points.map((point, pointIndex) => {
+            const value = point[valueKey];
+            const betterCount = lines.filter((candidate) => {
+              const candidateValue = candidate.points[pointIndex]?.[candidate.valueKey || "value"];
+              return Number.isFinite(candidateValue) && candidateValue > value;
+            }).length;
+            return { ...point, rank: lines.length - betterCount };
+          }),
+        };
+      });
     }
 
     function pathD(points, x, y, key, minValue = null) {
@@ -2574,30 +2584,104 @@
       return `<rect data-chart-shade x="${width}" y="0" width="0" height="${height}" fill="${cssVar("--bg")}" opacity="${CHART_SHADE_OPACITY}" pointer-events="none"/>`;
     }
 
+    function chartPlotTop(pad) {
+      return pad.top + CHART_PLOT_TOP_GAP;
+    }
+
+    function chartChrome(width, height, pad, last, lastX) {
+      return `
+        <rect data-hit="chart" x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}" fill="transparent"/>
+        ${chartShade(width, height)}
+        <line id="hoverLine" x1="${lastX}" x2="${lastX}" y1="0" y2="${height - pad.bottom}" stroke="${cssVar("--accent")}" stroke-width="1.5" opacity="0" vector-effect="non-scaling-stroke"/>
+        <g id="chartHoverMarkers" opacity="0" pointer-events="none"></g>
+        ${renderChartMarker(chartMarkerData(last, lastX, width))}
+      `;
+    }
+
     function chartLineKey(line, lineIndex) {
       return line.legendKey || line.key || `${line.label}-${line.valueKey}-${lineIndex}`;
     }
 
     function chartLinePaths(lines, x, y, options = {}) {
       const {
-        clipId = "",
         minValue = null,
-        opacity = 1,
         strokeWidth = 1.5,
         pathFn = pathD,
         key = null,
         lineKeyPrefix = "",
-        layer = null,
       } = options;
-      const clip = clipId ? ` clip-path="url(#${clipId})"` : "";
-      const opacityAttr = opacity < 1 ? ` opacity="${opacity}"` : "";
-      const layerName = layer || (clipId ? "active" : opacity < 1 ? "dim" : "line");
       return lines.map((line, lineIndex) => {
         const valueKey = key ?? line.valueKey;
         const d = pathFn(line.points, x, y, valueKey, minValue);
         const lineKey = `${lineKeyPrefix}${chartLineKey(line, lineIndex)}`;
-        return `<path d="${d}" data-chart-line="${escapeHtml(lineKey)}" data-chart-layer="${layerName}" fill="none" stroke="${line.color}" stroke-width="${strokeWidth}" stroke-dasharray="${line.dash || "0"}" vector-effect="non-scaling-stroke"${clip}${opacityAttr}/>`;
+        return `<path d="${d}" data-chart-line="${escapeHtml(lineKey)}" data-chart-layer="line" fill="none" stroke="${line.color}" stroke-width="${strokeWidth}" stroke-dasharray="${line.dash || "0"}" vector-effect="non-scaling-stroke"/>`;
       }).join("");
+    }
+
+    function chartMarkerSeries(lines, y, options = {}) {
+      const {
+        key = null,
+        minValue = null,
+      } = options;
+      return lines.map((line, lineIndex) => ({
+        key: chartLineKey(line, lineIndex),
+        color: line.color,
+        points: line.points,
+        valueKey: key ?? line.valueKey,
+        minValue,
+        y,
+      }));
+    }
+
+    function chartHoverMarkerPoints(series, index, xValue) {
+      return series.map((item) => {
+        const point = item.points[index];
+        if (!point) return null;
+        const rawValue = point[item.valueKey];
+        if (!Number.isFinite(rawValue)) return null;
+        const value = item.minValue === null || item.minValue === undefined ? rawValue : Math.max(item.minValue, rawValue);
+        const y = item.y(value);
+        if (!Number.isFinite(y)) return null;
+        const color = item.colorFor ? item.colorFor(point) : item.color;
+        return { key: item.key, x: xValue, y, color };
+      }).filter(Boolean);
+    }
+
+    function closestMarkerKey(markers, pointerY) {
+      let closestKey = null;
+      let closestDistance = Infinity;
+      for (const marker of markers) {
+        const distance = Math.abs(marker.y - pointerY);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestKey = marker.key;
+        }
+      }
+      return closestKey;
+    }
+
+    function updateChartHoverMarkers(svg, series, index, xValue, pointerY) {
+      const group = svg.querySelector("#chartHoverMarkers");
+      if (!group || !series.length) return null;
+      const markers = chartHoverMarkerPoints(series, index, xValue);
+      const activeKey = closestMarkerKey(markers, pointerY);
+      group.setAttribute("opacity", markers.length ? "1" : "0");
+      group.innerHTML = markers.map((marker) => {
+        const active = marker.key === activeKey;
+        const radius = active ? CHART_DOT_ACTIVE_RADIUS : CHART_DOT_RADIUS;
+        const fill = active ? marker.color : cssVar("--bg");
+        const stroke = active ? cssVar("--bg") : marker.color;
+        const strokeWidth = active ? 2 : 1.5;
+        return `<circle cx="${marker.x.toFixed(2)}" cy="${marker.y.toFixed(2)}" r="${radius}" fill="${escapeHtml(fill)}" stroke="${escapeHtml(stroke)}" stroke-width="${strokeWidth}" vector-effect="non-scaling-stroke"/>`;
+      }).join("");
+      return activeKey;
+    }
+
+    function hideChartHoverMarkers(svg) {
+      const group = svg.querySelector("#chartHoverMarkers");
+      if (!group) return;
+      group.setAttribute("opacity", "0");
+      group.innerHTML = "";
     }
 
     function ensureChartLegend(svg) {
@@ -2623,15 +2707,15 @@
       menu.dataset.bound = "true";
       menu.addEventListener("pointerover", (event) => {
         const item = event.target.closest("[data-chart-legend-key]");
-        if (item && menu.contains(item)) setChartLegendPreview(svg, item.dataset.chartLegendKey);
+        if (item && menu.contains(item)) setChartLegendPreview(svg, item.dataset.chartLegendKey, { muted: true });
       });
-      menu.addEventListener("pointerleave", () => setChartLegendPreview(svg, null));
+      menu.addEventListener("pointerleave", () => setChartLegendPreview(svg, null, { muted: true }));
       menu.addEventListener("focusin", (event) => {
         const item = event.target.closest("[data-chart-legend-key]");
-        if (item && menu.contains(item)) setChartLegendPreview(svg, item.dataset.chartLegendKey);
+        if (item && menu.contains(item)) setChartLegendPreview(svg, item.dataset.chartLegendKey, { muted: true });
       });
       menu.addEventListener("focusout", (event) => {
-        if (!menu.contains(event.relatedTarget)) setChartLegendPreview(svg, null);
+        if (!menu.contains(event.relatedTarget)) setChartLegendPreview(svg, null, { muted: true });
       });
     }
 
@@ -2671,13 +2755,14 @@
       }
 
       const previewKey = svg.dataset.legendPreviewKey || "";
+      const previewMuted = svg.dataset.legendPreviewMuted === "true";
       for (const row of rows) {
         const item = menu.querySelector(`[data-chart-legend-row="${row.index}"] .chart-legend-item`);
         if (!item) continue;
         const isPreviewed = row.key === previewKey;
         item.dataset.chartLegendKey = row.key;
         item.dataset.preview = isPreviewed ? "true" : "false";
-        if (previewKey && !isPreviewed) {
+        if (previewMuted && previewKey && !isPreviewed) {
           item.dataset.muted = "true";
         } else {
           item.removeAttribute("data-muted");
@@ -2691,12 +2776,15 @@
       }
     }
 
-    function setChartLegendPreview(svg, key) {
+    function setChartLegendPreview(svg, key, options = {}) {
+      const muted = options.muted === true;
       if (key) {
         svg.dataset.legendPreviewKey = key;
+        svg.dataset.legendPreviewMuted = muted ? "true" : "false";
         svg.classList.add("is-legend-preview");
       } else {
         delete svg.dataset.legendPreviewKey;
+        delete svg.dataset.legendPreviewMuted;
         svg.classList.remove("is-legend-preview");
       }
       svg.querySelectorAll("[data-chart-line]").forEach((line) => {
@@ -2705,7 +2793,7 @@
           line.removeAttribute("data-muted");
         } else {
           line.removeAttribute("data-preview");
-          if (key) {
+          if (muted && key) {
             line.setAttribute("data-muted", "true");
           } else {
             line.removeAttribute("data-muted");
@@ -2719,7 +2807,7 @@
           item.removeAttribute("data-muted");
         } else {
           item.dataset.preview = "false";
-          if (key) {
+          if (muted && key) {
             item.dataset.muted = "true";
           } else {
             item.removeAttribute("data-muted");
@@ -2766,7 +2854,7 @@
       if (date) date.textContent = marker.date;
     }
 
-    function setChartBeforeWidth(svg, width) {
+    function setChartShadeStart(svg, width) {
       const shade = svg.querySelector("[data-chart-shade]");
       if (shade) {
         const viewWidth = svg.viewBox.baseVal.width || CHART_WIDTH_FALLBACK;
@@ -2826,7 +2914,7 @@
     }
 
     function priceZoneLabel(zone) {
-      return zone === 101 ? ">p100" : `p${zone}`;
+      return zone === 101 ? "ATH" : `p${zone}`;
     }
 
     function priceZoneColor(zone) {
@@ -2885,7 +2973,7 @@
       if (value === 3) return "trim";
       if (value === 2) return "hold";
       if (value === 1) return "DCA";
-      return "idle";
+      return "wait";
     }
 
     function cyclePhaseColor(value) {
@@ -3119,7 +3207,7 @@
 
     function zoneAverageFmt(value) {
       if (!Number.isFinite(value) || value <= 0) return "-";
-      if (value > 100) return ">p100";
+      if (value > 100) return "ATH";
       return `p${value.toFixed(0)}`;
     }
 
@@ -3132,6 +3220,13 @@
 
     function actionUsd(value) {
       return value > 0 ? usd(value) : `<span class="table-zero">-</span>`;
+    }
+
+    function trimActionText(point) {
+      const actions = [];
+      if (point.buyUsd > 0) actions.push(`buy ${usd(point.buyUsd)}`);
+      if (point.sellUsd > 0) actions.push(`sell ${usd(point.sellUsd)}`);
+      return actions.length ? actions.join(" / ") : `<span class="table-zero">-</span>`;
     }
 
     function fmt(value) {
